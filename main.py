@@ -1,113 +1,104 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from typing import Optional
-import json
-import os
+from sqlmodel import SQLModel, Field, create_engine, Session, select
 import uvicorn
 
 JSON_FILENAME = "phonebook.json"
-
-# Use json as database:
-# https://dev.to/ahmed__elboshi/learn-how-to-use-json-as-a-small-database-for-your-python-projects-by-building-a-hotel-accounting-system-47b4
 
 app = FastAPI()
 @app.get("/")
 def root():
     return {"Phonebook App": "Hello! This is a simple phonebook app using FastAPI and a JSON file as a database."}
 
+###################################### M O D E L S ######################################
+class User(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(index=True, nullable=False)
+    last_name: str = Field(index=True, nullable=False)
+    phone: int | None = Field(default=None, index=True, unique=True)
+    email: str = Field(max_length=100, nullable=False)
+    address: str = Field(max_length=200, default="")
+
+##########################################################################################
+# sqlite works as a file sstem, it is not aimed for database server
+DATABASE_URL = "sqlite:///./phonebook.db"
+connect_args = {"check_same_thread": False}
+engine = create_engine(DATABASE_URL, echo=True, connect_args=connect_args)
+
+
+SQLModel.metadata.create_all(engine)
+
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+##########################################################################################
+
 # CRUD -> Create
-@app.post("/users")
-def create_user(name: str, last_name: str, phone: int, email: str, address: str):
-    # example:
-    # http://127.0.0.1:8000/users?name=%22Luis%22&last_name=%22Ponce%22&phone=33112233&email=%22test%40example.com%22&address=%22myaddress%22
-    try:
-        with open(JSON_FILENAME, 'r') as file:
-            data = json.load(file)
-    except:
-        data = {}
-    user = {
-        "name": name,
-        "last_name": last_name,
-        "phone": phone,
-        "email": email,
-        "address": address
+@app.post("/users/", response_model=User)
+"""
+    user post example:
+    {
+    "name": "Luis",
+    "last_name": "Ponce",
+    "phone": 33112213,
+    "email": "luis@example.com",
+    "address": "myaddress"
     }
-    fn = f"{name.lower()} {last_name.lower()}"
-    data[fn] = user
-    with open(JSON_FILENAME, 'w') as file:
-        json.dump(data, file, indent=4)
+"""
+def create_user(user: User, session: Session = Depends(get_session)):
+    session.add(user)
+    session.commit()
+    session.refresh(user)
     return user
 
-# CRUD -> Read
-@app.get("/users")
-def read_users():
-    if os.path.isfile(JSON_FILENAME) and os.access(JSON_FILENAME, os.R_OK):
-        with open(JSON_FILENAME, "r") as file:
-            try:
-                data = json.load(file)
-            except:
-                data = {}
-    else:
-        raise HTTPException(status_code=404, detail="read_users: Phonebook file not found or not readable")
-    return data
 
-@app.get("/users/{user_name}")
-# siempre tiene prioridad el PATH, y luego la query string
-def get_user(user_name: str, phone: Optional[int] = None) -> dict:
-    user_name = user_name.lower()
-    with open(JSON_FILENAME, "r") as file:
-        try:
-            data = json.load(file)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=404, detail="get_user: Could not read read_users phonebook")
-    if phone != None:
-        for u in data.values():
-            if u["phone"] == phone:
-                return u
-    else:
-        for k in data.keys():
-            if k == user_name:
-                return data[k]
-    raise HTTPException(status_code=404, detail="User not found")
+# CRUD -> Read
+@app.get("/users/", response_model=list[User])
+def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10, session: Session = Depends(get_session)):
+    statement = select(User).offset(skip).limit(limit)
+    # If phone is provided, filter by phone number
+    if phone:
+        statement = statement.where(User.phone == phone)
+    users = session.exec(statement).all()
+    if not users:
+        raise HTTPException(status_code=404, detail="User not found")
+    return users
+
+@app.get("/users/{user_id}", response_model=User)
+def get_user(user_id: int, session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 # CRUD -> Update
-@app.put("/users/{user_name}")
-def update_user(user_name: str, phone: int, email: str, address: str):
-    user_name = user_name.lower()
-    with open(JSON_FILENAME, "r") as file:
-        try:
-            data = json.load(file)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=404, detail="update_user: Could not read phonebook")
-    for k in data.keys():
-        if k == user_name:
-            user = data[k]
-            user["phone"] = phone
-            user["email"] = email
-            user["address"] = address
-            data[k] = user
-            with open(JSON_FILENAME, "w") as file:
-                json.dump(data, file)
-            return user
-    raise HTTPException(status_code=404, detail="User not found")
+@app.put("/users/{user_id}", response_model=User)
+def update_user(user_id: int, user: User, session: Session = Depends(get_session)):
+    user.name = user.name.lower()
+    user.last_name = user.last_name.lower()
+    existing_user = session.get(User, user_id)
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    existing_user.name = user.name
+    existing_user.last_name = user.last_name
+    existing_user.phone = user.phone
+    existing_user.email = user.email
+    existing_user.address = user.address
+    session.add(existing_user)
+    session.commit()
+    session.refresh(existing_user)
+    return existing_user
 
 # CRUD -> Delete
-@app.delete("/users/{user_name}")
-def delete_user(user_name: str):
-    user_name = user_name.lower()
-    with open(JSON_FILENAME, "r") as file:
-        try:
-            data = json.load(file)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=404, detail="delete_user: Could not read phonebook")
-    
-    for k in data.keys():
-        if k == user_name:
-            user = data[k]
-            del data[k]
-            with open(JSON_FILENAME, "w") as file:
-                json.dump(data, file)
-            return user
-    raise HTTPException(status_code=404, detail="User not found")
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int, session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found to delete")
+    session.delete(user)
+    session.commit()
+    return user
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
