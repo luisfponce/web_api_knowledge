@@ -1,6 +1,6 @@
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import CHAR
+from sqlalchemy import CHAR, TEXT
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -17,7 +17,7 @@ class Cards(SQLModel, table=True):
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    nickname: str = Field(max_length=50, index=True, nullable=False)
+    username: str = Field(max_length=50, index=True, nullable=False)
     name: str = Field(max_length=100, index=True, nullable=False)
     last_name: str = Field(max_length=100, index=True, nullable=False)
     phone: Optional[int] = Field(default=12, index=True, unique=True) # Check why numbers lengh like 10 digits is not working
@@ -30,9 +30,11 @@ class User(SQLModel, table=True):
 class UserSession(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    token: str = Field(max_length=100, nullable=False, unique=True)
+    token: str = Field(sa_type=TEXT, nullable=False, unique=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: datetime
+
+# NON ORM MODELS
 
 
 class CardRead(BaseModel):

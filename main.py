@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, Response, Cookie
+from fastapi import FastAPI, HTTPException, Depends, Response, Cookie, Header
 from typing import Optional
 from sqlmodel import Session, select
 from passlib.hash import sha256_crypt
@@ -7,10 +7,10 @@ from datetime import datetime, timedelta
 import uvicorn
 
 from database.models import User, Cards, UserReadWithCards, UserSession
-from security.login import CurrentUserSession
 from database.db_connection import get_session
+from auth.login import authenticate_user, get_current_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, crear_jwt, validar_jwt
+# from fastapi.security import OAuth2PasswordRequestForm
 
-cs = CurrentUserSession()
 app = FastAPI()
 
 """
@@ -39,47 +39,33 @@ def root():
 # CRUD -> Create
 @app.post("/signup")
 def signup(user: User, session: Session = Depends(get_session)):
-    statement = select(User).where(User.nickname == user.nickname)
+    statement = select(User).where(User.username == user.username)
     result = session.exec(statement)
     user_exists = result.one_or_none()
     if user_exists:
-        raise HTTPException(status_code=400, detail="nickname already taken")
+        raise HTTPException(status_code=400, detail="username already taken")
     user.hashed_password = sha256_crypt.hash(user.hashed_password)
     session.add(user)
     session.commit()
     session.refresh(user)
     return {"message": "User created successfully"}
 
-
 @app.post("/login")
-def login(response: Response, nickname: str, password: str,
-          session: Session = Depends(get_session)):
-    statement = select(User).where(User.nickname == nickname)
-    result = session.exec(statement)
-    user = result.one_or_none()
+def login(username: str, password: str, session: Session = Depends(get_session)):
 
-    if not user or not sha256_crypt.verify(password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid nickname or password")
-    
-    # Create session token with 5 min expiry
-    session_token = secrets.token_hex(16)
-    now = datetime.utcnow()
-    expires_at = now + timedelta(minutes=5)
-    
-    user_session = UserSession(user_id=user.id, token=session_token, expires_at=expires_at)
-    session.add(user_session)
-    session.commit()
-    session.refresh(user_session)
-
-    # Set cookie (en mobiles esto no interesara, pero en navegadores si)
-    response.set_cookie(key="session_token", value=session_token, httponly=True)
-    return {"message": "Login successful"}
+    user = authenticate_user(username, password, session)
+    if not user:
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    access_token = crear_jwt(
+        data={"sub": user.username}
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.post("/cards/", response_model=Cards)
 def create_card(card: Cards, session: Session = Depends(get_session),
-                session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+                current_user: dict = Depends(get_current_user)):
+    
     # Ensure the user exists before creating a card
     user = session.get(User, card.user_id)
     if not user:
@@ -90,34 +76,26 @@ def create_card(card: Cards, session: Session = Depends(get_session),
     session.refresh(card)
     return card
 
-
-@app.post("/logout")
-def logout(response: Response, session_token: Optional[str] = Cookie(None),
-           session: Session = Depends(get_session)):
-    if session_token:
-        user_session = session.exec(select(UserSession).where(UserSession.token == session_token)).first()
-        if user_session:
-            session.delete(user_session)
-            session.commit()
-    response.delete_cookie("session_token")
-    return {"message": "Logged out successfully"}
-
 ###############################################################################
-
-
 # CRUD -> Read
 @app.get("/profile")
-def profile(current_user: User = Depends(cs.current_session)):
-    return {"nickname": current_user.nickname, "id": current_user.id}
+def profile(current_user: dict = Depends(get_current_user)):
+    return {"username": current_user.username, "id": current_user.id}
 
 
-# curl -X POST "http://localhost:8000/login?nickname=lfponcen&password=lfponcen" -v  <-- to get the session_token thru the cookie
+# curl -X POST "http://localhost:8000/login?username=lfponcen&password=lfponcen" -v  <-- to get the session_token thru the cookie
 # curl -b session_token=(gotten from verbose) -X GET "http://localhost:8000/users"
 @app.get("/users", response_model=list[User])
 def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
                session: Session = Depends(get_session),
-               session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+               authorization: Optional[str] = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    token = authorization.split(" ")
+    data = validar_jwt(token[1])  # Validate JWT token
+    if not data:
+        raise HTTPException(status_code=401, detail="Invalid token")
     statement = select(User).offset(skip).limit(limit)
     # If phone is provided, filter by phone number
     if phone:
@@ -129,8 +107,7 @@ def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
 
 @app.get("/users/{user_id}", response_model=User)
 def get_user(user_id: int, session: Session = Depends(get_session),
-             session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+             current_user: dict = Depends(get_current_user)):
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -139,8 +116,8 @@ def get_user(user_id: int, session: Session = Depends(get_session),
 @app.get("/cards/", response_model=list[Cards])
 def read_cards(skip: int = 0, limit: int = 10,
                session: Session = Depends(get_session),
-               session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+               current_user: dict = Depends(get_current_user)):
+    
     statement = select(Cards).offset(skip).limit(limit)
     cards = session.exec(statement).all()
     if not cards:
@@ -149,8 +126,8 @@ def read_cards(skip: int = 0, limit: int = 10,
 
 @app.get("/cards/{card_id}", response_model=Cards)
 def get_card(card_id: int, session: Session = Depends(get_session),
-             session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+             current_user: dict = Depends(get_current_user)):
+    
     card = session.get(Cards, card_id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
@@ -158,8 +135,8 @@ def get_card(card_id: int, session: Session = Depends(get_session),
 
 @app.get("/user/cards/{user_id}", response_model=UserReadWithCards)
 def get_user_with_cards(user_id: int, session: Session = Depends(get_session),
-                        session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+                        current_user: dict = Depends(get_current_user)):
+    
     statement = select(User).where(User.id == user_id)
     result = session.exec(statement)
     user = result.one_or_none()
@@ -173,8 +150,8 @@ def get_user_with_cards(user_id: int, session: Session = Depends(get_session),
 @app.put("/users/{user_id}", response_model=User)
 def update_user(user_id: int, user: User,
                 session: Session = Depends(get_session),
-                session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+                current_user: dict = Depends(get_current_user)):
+    
     user.name = user.name.lower()
     user.last_name = user.last_name.lower()
     existing_user = session.get(User, user_id)
@@ -185,10 +162,10 @@ def update_user(user_id: int, user: User,
     existing_user.phone = user.phone
     existing_user.email = user.email
     existing_user.hashed_password = sha256_crypt.hash(user.hashed_password)  # Hash the password
-    # Ensure the nickname is unique
-    statement = select(User).where(User.nickname == user.nickname, User.id != user_id)
+    # Ensure the username is unique
+    statement = select(User).where(User.username == user.username, User.id != user_id)
     if session.exec(statement).first():
-        raise HTTPException(status_code=400, detail="Nickname already taken")
+        raise HTTPException(status_code=400, detail="username already taken")
     session.add(existing_user)
     session.commit()
     session.refresh(existing_user)
@@ -197,8 +174,8 @@ def update_user(user_id: int, user: User,
 @app.put("/cards/{card_id}", response_model=Cards)
 def update_card(card_id: int, card: Cards,
                 session: Session = Depends(get_session),
-                session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+                current_user: dict = Depends(get_current_user)):
+    
     existing_card = session.get(Cards, card_id)
     if not existing_card:
         raise HTTPException(status_code=404, detail="Card not found")
@@ -217,11 +194,8 @@ def update_card(card_id: int, card: Cards,
 # CRUD -> Delete
 @app.delete("/users/{user_id}")
 def delete_user(user_id: int, session: Session = Depends(get_session),
-                session_token: Optional[str] = Cookie(None)):
+                current_user: dict = Depends(get_current_user)):
     try:
-        cu = cs.current_session(session_token=session_token, session=session)  # Validate session
-        if not cu:
-            raise HTTPException(status_code=401, detail="Not authenticated")
         user = session.get(User, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found to delete")
@@ -234,8 +208,8 @@ def delete_user(user_id: int, session: Session = Depends(get_session),
 
 @app.delete("/cards/{card_id}")
 def delete_card(card_id: int, session: Session = Depends(get_session),
-                session_token: Optional[str] = Cookie(None)):
-    cs.current_session(session_token=session_token, session=session)  # Validate session
+                current_user: dict = Depends(get_current_user)):
+    
     card = session.get(Cards, card_id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found to delete")
