@@ -9,5 +9,5 @@ pydantic_core==2.33.2
 PyJWT==2.10.1
 pydantic[email]
 python-dotenv
-fastapi-mail
-fastapi[all]
+fastapi-mail==1.5.0
+redis==5.3.1
