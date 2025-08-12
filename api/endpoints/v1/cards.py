@@ -13,7 +13,6 @@ router = APIRouter()
 async def create_card(card: Cards, session: Session = Depends(get_session),
                    authorization: Optional[str] = Header(None)):
     data = validar_jwt(authorization)
-    print (f"Data: {data}")
     if not data:
         raise HTTPException(status_code=401, detail="Unauthorized token")
     # Ensure the user exists before creating a card
