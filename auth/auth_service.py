@@ -8,13 +8,13 @@ import jwt
 from passlib.hash import sha256_crypt
 import re
 from dotenv import load_dotenv
-import os
+from core import config
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("ENV_SECRET_KEY")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = config.JWT_SECRET_KEY
+ALGORITHM = config.JWT_ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 def authenticate_user(username: str, password: str, session: Session = Depends(get_session)):
