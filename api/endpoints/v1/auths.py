@@ -13,6 +13,7 @@ import binascii
 
 from redis import Redis
 from db.redis_connection import get_redis
+from schemas.login_schema import LoginRequest
 
 router = APIRouter()
 
@@ -31,9 +32,8 @@ def signup(user: User, session: Session = Depends(get_session)):
     return {"message": "User created successfully"}
 
 @router.post("/login")
-def login(username: str, password: str, session: Session = Depends(get_session)):
-
-    user = authenticate_user(username, password, session)
+def login(request: LoginRequest, session: Session = Depends(get_session)):
+    user = authenticate_user(request.username, request.password, session)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     access_token = crear_jwt(
