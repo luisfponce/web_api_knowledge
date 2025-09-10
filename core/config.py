@@ -22,7 +22,7 @@ smtp_conf = ConnectionConfig(
 )
 
 # JWT configuration
-JWT_SECRET_KEY = os.getenv("ENV_SECRET_KEY")
+JWT_SECRET_KEY = os.getenv("ENV_SECRET_KEY", "testkey")
 JWT_ALGORITHM = "HS256"
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
