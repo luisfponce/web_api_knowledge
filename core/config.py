@@ -1,14 +1,17 @@
 from fastapi_mail import ConnectionConfig
 from dotenv import load_dotenv
 import os
+from schemas.email_schema import Settings
 
 load_dotenv()
 
+settings = Settings()
+
 # SMTP server configuration
 smtp_conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv('ENV_MAIL_USERNAME'),
-    MAIL_PASSWORD=os.getenv('ENV_MAIL_PASSWORD'),
-    MAIL_FROM=os.getenv('ENV_MAIL_USERNAME'),
+    MAIL_USERNAME=settings.MAIL_USERNAME,
+    MAIL_PASSWORD=settings.MAIL_PASSWORD,
+    MAIL_FROM=settings.MAIL_FROM,
     MAIL_FROM_NAME="Your App",
     MAIL_PORT=587,
     MAIL_SERVER="smtp.gmail.com",
