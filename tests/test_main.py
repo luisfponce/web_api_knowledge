@@ -10,11 +10,25 @@ def test_root():
         "Bank App": "This is a simple app using FastAPI and mariadb."
     }
 
+def test_register_user():
+    response = client.post("/api/v1/auth/signup", json={
+        "username": "pytest",
+        "name": "pytest",
+        "last_name": "testing",
+        "phone": 3334353637,
+        "email": "pytestmyapp@testing.com",
+        "hashed_password": "pytest"
+    })
+    assert response.status_code == 200
+    assert response.json() == {
+        "message": "User created successfully"
+    }
+
 def test_login_and_access_private():
     # First, get a token
     response = client.post("/api/v1/auth/login", json={  # <-- use json instead of data
-        "username": "a",
-        "password": "a"
+        "username": "pytest",
+        "password": "pytest"
     })
     assert response.status_code == 200
     token = response.json()["access_token"]
