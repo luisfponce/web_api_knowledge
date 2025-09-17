@@ -10,8 +10,12 @@ from infrastructure.email.smtp_service import send_email
 router = APIRouter()
 
 @router.post("/cards", response_model=Cards)
-async def create_card(card: Cards, session: Session = Depends(get_session),
-                   authorization: Optional[str] = Header(None)):
+async def create_card(
+    card: Cards,
+    session: Session = Depends(get_session),
+    authorization: Optional[str] = Header(None),
+    send_email_header: Optional[str] = Header(None, alias="send_email")
+):
     data = validar_jwt(authorization)
     if not data:
         raise HTTPException(status_code=401, detail="Unauthorized token")
@@ -19,13 +23,14 @@ async def create_card(card: Cards, session: Session = Depends(get_session),
     user = session.get(User, card.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    await send_email(user.email, user.username)
+    if str(send_email_header).lower() != "false":
+        await send_email(user.email, user.username)
     session.add(card)
     session.commit()
     session.refresh(card)
     return card
 
-@router.get("/cards", response_model=list[Cards])
+@router.get("", response_model=list[Cards])
 def read_cards(skip: int = 0, limit: int = 10,
                session: Session = Depends(get_session),
                    authorization: Optional[str] = Header(None)):
