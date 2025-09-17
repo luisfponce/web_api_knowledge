@@ -30,4 +30,5 @@ jobs:
     - name: Run pytest (CI only)
       run: |
         export PYTHONPATH=$(pwd)
+        if [ -f bank_db.db ]; then rm -rf bank_db.db; fi
         pytest tests/test_ci.py -v
