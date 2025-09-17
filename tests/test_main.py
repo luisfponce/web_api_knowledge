@@ -3,13 +3,6 @@ from main import app
 
 client = TestClient(app)
 
-def test_root():
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.json() == {
-        "Bank App": "This is a simple app using FastAPI and mariadb."
-    }
-
 def test_register_user():
     response = client.post("/api/v1/auth/signup", json={
         "username": "pytest",

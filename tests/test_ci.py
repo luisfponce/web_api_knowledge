@@ -40,15 +40,21 @@ def get_token():
 
 def test_register_card():
     token = get_token()
-    headers = {"Authorization": f"Bearer {token}"}
-    response = client.post("/api/v1/cards", json={
+    headers = {"Authorization": f"Bearer {token}", "send_email": "false"}
+    response = client.post("/api/v1/cards/cards", json={
         "user_id": 1,
         "card_type": "visa",
-        "card_number": 5256010203040506,
-        "expiration_date": "01/01/2025",
+        "card_number": "5256010203040506",
+        "expiration_date": "01/2025",
     },  headers=headers)
     assert response.status_code == 200
-
+    assert response.json() == {
+        "id": 1,
+        "card_number": "5256010203040506",
+        "user_id": 1,
+        "card_type": "visa",
+        "expiration_date": "01/2025"
+    }
 
 def test_read_users():
     token = get_token()
