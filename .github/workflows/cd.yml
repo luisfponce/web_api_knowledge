@@ -1,6 +1,3 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
 name: CD Tests
 
 on:
@@ -12,7 +9,6 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +26,10 @@ jobs:
         pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Run pytest (CD only)
+      env:
+        ENV_MAIL_USERNAME: ${{ secrets.ENV_MAIL_USERNAME }}
+        ENV_MAIL_PASSWORD: ${{ secrets.ENV_MAIL_PASSWORD }}
+        ENV_SECRET_KEY: ${{ secrets.ENV_SECRET_KEY }}
       run: |
         export PYTHONPATH=$(pwd)
         if [ -f bank_db.db ]; then rm -rf bank_db.db; fi
