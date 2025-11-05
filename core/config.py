@@ -2,24 +2,29 @@ from fastapi_mail import ConnectionConfig
 from dotenv import load_dotenv
 import os
 from schemas.email_schema import Settings
+from pydantic import ValidationError
 
 load_dotenv()
 
 settings = Settings()
 
 # SMTP server configuration
-smtp_conf = ConnectionConfig(
-    MAIL_USERNAME=settings.MAIL_USERNAME,
-    MAIL_PASSWORD=settings.MAIL_PASSWORD,
-    MAIL_FROM=settings.MAIL_FROM,
-    MAIL_FROM_NAME="Your App",
-    MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True
-)
+try:
+    smtp_conf = ConnectionConfig(
+        MAIL_USERNAME=os.getenv("ENV_MAIL_USERNAME",settings.ENV_MAIL_USERNAME),
+        MAIL_PASSWORD=os.getenv("ENV_MAIL_PASSWORD",settings.ENV_MAIL_PASSWORD),
+        MAIL_FROM=os.getenv("ENV_MAIL_USERNAME",settings.ENV_MAIL_FROM),
+        MAIL_FROM_NAME="Your App",
+        MAIL_PORT=587,
+        MAIL_SERVER="smtp.gmail.com",
+        MAIL_STARTTLS=True,
+        MAIL_SSL_TLS=False,
+        USE_CREDENTIALS=True,
+        VALIDATE_CERTS=True
+    )
+except ValidationError as e:
+    print("⚠️ Missing mail config in environment; skipping email setup for tests.")
+    smtp_conf = None
 
 # JWT configuration
 JWT_SECRET_KEY = os.getenv("ENV_SECRET_KEY", "testkey")
