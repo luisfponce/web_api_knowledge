@@ -3,9 +3,13 @@ name: CI Tests
 on:
   pull_request:
     branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  ci-tests:
+    name: Python Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -25,7 +29,6 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Patch fastapi-mail for Python 3.12
       run: |
-        python -m pip install --upgrade pip
         pip install --upgrade "fastapi-mail>=1.4.1"
     - name: Run pytest (CI only)
       env:

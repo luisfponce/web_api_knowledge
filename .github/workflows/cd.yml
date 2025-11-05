@@ -8,7 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  cd-tests:
+    name: Python Tests
     runs-on: ubuntu-latest
 
     steps:
