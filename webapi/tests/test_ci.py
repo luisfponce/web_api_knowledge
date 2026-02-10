@@ -1,7 +1,9 @@
 from fastapi.testclient import TestClient
-from main import app
-
-client = TestClient(app)
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from main import myapp
+client = TestClient(myapp)
 
 TEST_USER = "testuser"
 TEST_PSW  = "testPSW"

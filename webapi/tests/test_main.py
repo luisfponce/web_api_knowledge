@@ -1,7 +1,11 @@
 from fastapi.testclient import TestClient
-from main import app
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-client = TestClient(app)
+from main import myapp
+
+client = TestClient(myapp)
 
 def test_register_user():
     response = client.post("/api/v1/auth/signup", json={
