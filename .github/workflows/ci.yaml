@@ -36,8 +36,7 @@ jobs:
         ENV_MAIL_PASSWORD: ${{ secrets.ENV_MAIL_PASSWORD }}
         ENV_SECRET_KEY: ${{ secrets.ENV_SECRET_KEY }}
       run: |
-        export PYTHONPATH=$(pwd)
-        pytest tests/test_ci.py -v
+        cd webapi; pytest tests/test_ci.py -v
   snyk-scan:
       name: Snyk Security Scan
       runs-on: ubuntu-latest

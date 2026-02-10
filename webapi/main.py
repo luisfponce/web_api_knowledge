@@ -3,7 +3,7 @@ import uvicorn
 from api.routers import api_router
 # from api.endpoints.v1 import auths, users, cards
 
-app = FastAPI()
+myapp = FastAPI()
 
 """
 Create a MariaDB container for testing purposes.
@@ -22,13 +22,13 @@ Ensure that the environment variable DB_URL is set to your MariaDB connection st
 Example: export DB_URL="mariadb+mariadbconnector://pbtest:pbtest@127.0.0.1:3306/bank_db"
 """
 
-@app.get("/")
+@myapp.get("/")
 def root():
     return {"Bank App": "This is a simple app using FastAPI and mariadb."}
 
 
 # Include all API routes
-app.include_router(api_router, prefix="/api/v1", tags=["api"])
+myapp.include_router(api_router, prefix="/api/v1", tags=["api"])
 
 # Include routers
 """
@@ -38,4 +38,4 @@ app.include_router(auths.router, prefix="/auth", tags=["Auth"])
 """
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(myapp, host="127.0.0.1", port=8000)

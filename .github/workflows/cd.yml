@@ -36,7 +36,7 @@ jobs:
         ENV_MAIL_PASSWORD: ${{ secrets.ENV_MAIL_PASSWORD }}
         ENV_SECRET_KEY: ${{ secrets.ENV_SECRET_KEY }}
       run: |
-        export PYTHONPATH=$(pwd)
+        cd webapi;
         if [ -f bank_db.db ]; then rm -rf bank_db.db; fi
         pytest tests/test_main.py -v
   snyk-scan:
