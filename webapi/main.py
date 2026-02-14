@@ -3,7 +3,29 @@ import uvicorn
 from api.routers import api_router
 # from api.endpoints.v1 import auths, users, cards
 
-myapp = FastAPI()
+tags_metadata = [
+    {
+        "name": "Auth",
+        "description": "Authentication operations (login, signup, password recovery).",
+    },
+    {
+        "name": "Users",
+        "description": "Operations with users (CRUD).",
+    },
+    {
+        "name": "Cards",
+        "description": "Operations with cards.",
+    },
+]
+
+myapp = FastAPI(
+    title="Bank API",
+    description="API for managing users, cards, and authentication in a banking system.",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=tags_metadata
+)
 
 """
 Create a MariaDB container for testing purposes.
