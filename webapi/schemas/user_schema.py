@@ -1,14 +1,14 @@
 from typing import Optional, List
 from pydantic import BaseModel
-from .card_schema import CardRead
+from .prompt_schema import PromptRead
 
-class UserReadWithCards(BaseModel):
+class UserReadWithPrompts(BaseModel):
     id: int
     name: str
     last_name: str
     phone: Optional[int]
     email: str
-    cards: List[CardRead] = []
+    prompts: List[PromptRead] = []
 
     class Config:
         from_attributes = True

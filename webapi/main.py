@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
 from api.routers import api_router
-# from api.endpoints.v1 import auths, users, cards
+# from api.endpoints.v1 import auths, users, prompts
 
 tags_metadata = [
     {
@@ -13,14 +13,14 @@ tags_metadata = [
         "description": "Operations with users (CRUD).",
     },
     {
-        "name": "Cards",
-        "description": "Operations with cards.",
+        "name": "Prompts",
+        "description": "Operations with prompts.",
     },
 ]
 
 myapp = FastAPI(
-    title="Bank API",
-    description="API for managing users, cards, and authentication in a banking system.",
+    title="Portfolio API",
+    description="API for managing users, prompts, and authentication in a web environment.",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -46,7 +46,7 @@ Example: export DB_URL="mariadb+mariadbconnector://pbtest:pbtest@127.0.0.1:3306/
 
 @myapp.get("/")
 def root():
-    return {"Bank App": "This is a simple app using FastAPI and mariadb."}
+    return {"Portfolio App": "This is a simple app using FastAPI and mariadb."}
 
 
 # Include all API routes
@@ -55,7 +55,7 @@ myapp.include_router(api_router, prefix="/api/v1", tags=["api"])
 # Include routers
 """
 app.include_router(users.router, prefix="/users", tags=["Users"])
-app.include_router(cards.router, prefix="/cards", tags=["Cards"])
+app.include_router(prompts.router, prefix="/prompts", tags=["Prompts"])
 app.include_router(auths.router, prefix="/auth", tags=["Auth"])
 """
 
