@@ -12,7 +12,7 @@ def test_root():
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == {
-        "Bank App": "This is a simple app using FastAPI and mariadb."
+        "Portfolio App": "This is a simple app using FastAPI and mariadb."
     }
 
 
@@ -40,22 +40,24 @@ def get_token():
     return token
 
 
-def test_register_card():
+def test_register_prompt():
     token = get_token()
     headers = {"Authorization": f"Bearer {token}", "send_email": "false"}
-    response = client.post("/api/v1/cards/cards", json={
+    response = client.post("/api/v1/prompts", json={
         "user_id": 1,
-        "card_type": "visa",
-        "card_number": "5256010203040506",
-        "expiration_date": "01/2025",
+        "model_name": "gpt-4.1",
+        "prompt_text": "Generate a test response",
+        "category": "qa",
+        "rate": "high",
     },  headers=headers)
     assert response.status_code == 200
     assert response.json() == {
         "id": 1,
-        "card_number": "5256010203040506",
         "user_id": 1,
-        "card_type": "visa",
-        "expiration_date": "01/2025"
+        "model_name": "gpt-4.1",
+        "prompt_text": "Generate a test response",
+        "category": "qa",
+        "rate": "high"
     }
 
 def test_read_users():
@@ -65,8 +67,8 @@ def test_read_users():
     assert response.status_code == 200
 
 
-def test_read_cards():
+def test_read_prompts():
     token = get_token()
     headers = {"Authorization": f"Bearer {token}"}
-    response = client.get("/api/v1/cards", headers=headers)
+    response = client.get("/api/v1/prompts", headers=headers)
     assert response.status_code == 200

@@ -95,6 +95,8 @@ def delete_user(user_id: int, session: Session = Depends(get_session),
             raise HTTPException(status_code=404, detail="User not found to delete")
         session.delete(user)
         session.commit()
+    except HTTPException:
+        raise
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
