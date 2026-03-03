@@ -15,7 +15,7 @@ class User(SQLModel, table=True):
     email: EmailStr = Field(max_length=100, nullable=False)
     hashed_password: str = Field(max_length=255)  # Longer for bcrypt hashes
 
-    cards: List["Cards"] = Relationship(
+    prompts: List["Prompts"] = Relationship(
         sa_relationship_kwargs={"lazy": "selectin"}, 
         back_populates="user"
     )

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlmodel import Session, select
 from models.user import User
 from typing import Optional
-from schemas.user_schema import UserReadWithCards
+from schemas.user_schema import UserReadWithPrompts
 from db.db_connection import get_session
 from auth.auth_service import validar_jwt
 from passlib.hash import sha256_crypt
@@ -41,8 +41,8 @@ def get_user(user_id: int, session: Session = Depends(get_session),
     return user
 
 
-@router.get("/cards/{user_id}", response_model=UserReadWithCards)
-def get_user_with_cards(user_id: int, session: Session = Depends(get_session),
+@router.get("/prompts/{user_id}", response_model=UserReadWithPrompts)
+def get_user_with_prompts(user_id: int, session: Session = Depends(get_session),
                authorization: Optional[str] = Header(None)):
     data = validar_jwt(authorization)
     if not data:
@@ -52,8 +52,8 @@ def get_user_with_cards(user_id: int, session: Session = Depends(get_session),
     user = result.one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    # Access cards within session to trigger lazy load
-    _ = user.cards
+    # Access prompts within session to trigger lazy load
+    _ = user.prompts
     return user
 
 @router.put("/{user_id}", response_model=User)
@@ -95,6 +95,8 @@ def delete_user(user_id: int, session: Session = Depends(get_session),
             raise HTTPException(status_code=404, detail="User not found to delete")
         session.delete(user)
         session.commit()
+    except HTTPException:
+        raise
     except Exception as e:
         session.rollback()
         raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
