@@ -1,0 +1,17 @@
+# Python bytecode and cache
+__pycache__/
+*.pyc
+*.pyo
+
+# SQLite / local database files
+*.db
+
+# Pytest remnants
+.pytest_cache/
+.cache/
+.pytest_cache/**
+
+# Test and coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
