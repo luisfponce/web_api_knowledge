@@ -1,4 +1,5 @@
 from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 from sqlmodel import Session, select
 from models.user import User
@@ -42,7 +43,7 @@ def crear_jwt(data: dict):
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return token
 
-# Validar un token
+# Validar un token con prefijo "Bearer" (compatibilidad legado)
 def validar_jwt(token: str):
     try:
         if not token:
@@ -61,4 +62,33 @@ def validar_jwt(token: str):
         return None
     except Exception:
         return None
+
+
+# Validar token puro (sin prefijo "Bearer")
+def validar_jwt_raw(token: str):
+    try:
+        if not token:
+            return None
+        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return decoded["data"]
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+    except Exception:
+        return None
+
+
+# Esquema HTTPBearer — registra el Security Scheme en OpenAPI (/docs)
+bearer_scheme = HTTPBearer()
+
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+):
+    """Dependencia reutilizable para endpoints protegidos con Bearer token."""
+    data = validar_jwt_raw(credentials.credentials)
+    if not data:
+        raise HTTPException(status_code=401, detail="Unauthorized token")
+    return data
     

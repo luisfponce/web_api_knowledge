@@ -4,7 +4,7 @@ from typing import Optional
 from models.user import User
 from models.prompts import Prompts
 from db.db_connection import get_session
-from auth.auth_service import validar_jwt
+from auth.auth_service import get_current_user
 from infrastructure.email.smtp_service import send_email
 
 router = APIRouter()
@@ -13,12 +13,9 @@ router = APIRouter()
 async def create_prompt(
     prompt: Prompts,
     session: Session = Depends(get_session),
-    authorization: Optional[str] = Header(None),
+    current_user: dict = Depends(get_current_user),
     send_email_header: Optional[str] = Header("false", alias="send_email")
 ):
-    data = validar_jwt(authorization)
-    if not data:
-        raise HTTPException(status_code=401, detail="Unauthorized token")
     # Ensure the user exists before creating a prompt
     user = session.get(User, prompt.user_id)
     if not user:
@@ -40,10 +37,7 @@ async def create_prompt(
 @router.get("", response_model=list[Prompts])
 def read_prompts(skip: int = 0, limit: int = 10,
                session: Session = Depends(get_session),
-                    authorization: Optional[str] = Header(None)):
-    data = validar_jwt(authorization)
-    if not data:
-        raise HTTPException(status_code=401, detail="Unauthorized token")
+               current_user: dict = Depends(get_current_user)):
     statement = select(Prompts).offset(skip).limit(limit)
     prompts = session.exec(statement).all()
     if not prompts:
@@ -53,10 +47,7 @@ def read_prompts(skip: int = 0, limit: int = 10,
 
 @router.get("/{prompt_id}", response_model=Prompts)
 def get_prompt(prompt_id: int, session: Session = Depends(get_session),
-                    authorization: Optional[str] = Header(None)):
-    data = validar_jwt(authorization)
-    if not data:
-        raise HTTPException(status_code=401, detail="Unauthorized token")
+               current_user: dict = Depends(get_current_user)):
     prompt = session.get(Prompts, prompt_id)
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
@@ -65,10 +56,7 @@ def get_prompt(prompt_id: int, session: Session = Depends(get_session),
 @router.put("/{prompt_id}", response_model=Prompts)
 def update_prompt(prompt_id: int, prompt: Prompts,
                 session: Session = Depends(get_session),
-                    authorization: Optional[str] = Header(None)):
-    data = validar_jwt(authorization)
-    if not data:
-        raise HTTPException(status_code=401, detail="Unauthorized token") 
+                current_user: dict = Depends(get_current_user)):
     existing_prompt = session.get(Prompts, prompt_id)
     if not existing_prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
@@ -88,10 +76,7 @@ def update_prompt(prompt_id: int, prompt: Prompts,
 
 @router.delete("/{prompt_id}")
 def delete_prompt(prompt_id: int, session: Session = Depends(get_session),
-                    authorization: Optional[str] = Header(None)):
-    data = validar_jwt(authorization)
-    if not data:
-        raise HTTPException(status_code=401, detail="Unauthorized token")
+                current_user: dict = Depends(get_current_user)):
     prompt = session.get(Prompts, prompt_id)
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found to delete")
