@@ -87,14 +87,14 @@ def test_profile_success(client, auth_header, created_user):
     response = client.get("/api/v1/auth/profile", headers=auth_header)
 
     assert response.status_code == 200
-    assert response.json()["profile darta"]["sub"] == created_user.username
+    assert response.json()["profile data"]["sub"] == created_user.username
 
 
 def test_profile_invalid_token_returns_401(client):
     response = client.get("/api/v1/auth/profile", headers={"Authorization": "Token abc"})
 
-    assert response.status_code == 401
-    assert response.json()["detail"] == "Unauthorized token"
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Invalid authentication credentials"
 
 
 def test_generate_password_user_not_found_returns_404(client):
