@@ -36,7 +36,7 @@ jobs:
       run: |
         cd webapi
         if [ -f bank_db.db ]; then rm -f bank_db.db; fi
-        pytest tests/test_main.py -v
+        pytest tests/test_release.py -v
 
   container-smoke-test:
     name: Container Build & Healthcheck Smoke Test
