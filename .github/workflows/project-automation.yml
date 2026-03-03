@@ -1,0 +1,22 @@
+name: Add Issues and PRs to GitHub Project
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened
+  pull_request:
+    types:
+      - opened
+      - reopened
+
+jobs:
+  add-to-project:
+    name: Add to Scrum Project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/add-to-project@v1.0.2
+        with:
+          # URL del proyecto: https://github.com/users/luisfponce/projects/1
+          project-url: https://github.com/users/luisfponce/projects/1
+          github-token: ${{ secrets.PROJECT_PAT }}
