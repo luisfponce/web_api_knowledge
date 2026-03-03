@@ -4,7 +4,7 @@ from models.user import User
 from typing import Optional
 from passlib.hash import sha256_crypt
 from db.db_connection import get_session
-from auth.auth_service import authenticate_user, crear_jwt, validar_jwt
+from auth.auth_service import authenticate_user, crear_jwt, validar_jwt, get_current_user
 from infrastructure.email.smtp_service import send_email
 import secrets
 import base64
@@ -43,11 +43,8 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
 
 
 @router.get("/profile")
-def profile(authorization: Optional[str] = Header(None)):
-    data = validar_jwt(authorization)
-    if not data:
-        raise HTTPException(status_code=401, detail="Unauthorized token")
-    return {"profile darta": data}
+def profile(current_user: dict = Depends(get_current_user)):
+    return {"profile data": current_user}
 
 @router.post("/generate")
 async def generate_password(
