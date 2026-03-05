@@ -35,7 +35,6 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-# Crear un token
 def crear_jwt(data: dict):
     payload = {
         "exp": datetime.utcnow() + timedelta(hours=1),

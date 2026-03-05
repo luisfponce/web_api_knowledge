@@ -10,8 +10,6 @@ from passlib.hash import sha256_crypt
 
 router = APIRouter()
 
-# curl -X POST "http://localhost:8000/login?username=lfponcen&password=lfponcen" -v  <-- to get the session_token thru the cookie
-# curl -b session_token=(gotten from verbose) -X GET "http://localhost:8000"
 @router.get("", response_model=list[User])
 def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
                session: Session = Depends(get_session),
