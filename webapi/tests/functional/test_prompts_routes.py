@@ -76,7 +76,9 @@ def test_create_prompt_send_email_true_calls_email(client, auth_header, created_
     assert called["value"] is True
 
 
-def test_create_prompt_send_email_exception_still_success(client, auth_header, created_user, monkeypatch):
+def test_create_prompt_send_email_exception_still_success(
+    client, auth_header, created_user, monkeypatch
+):
     async def failing_send_email(*args, **kwargs):
         raise Exception("smtp unavailable")
 
@@ -198,4 +200,3 @@ def test_delete_prompt_unauthorized_returns_401(client):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Unauthorized token"
-

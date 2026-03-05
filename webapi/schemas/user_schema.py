@@ -2,6 +2,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 from .prompt_schema import PromptRead
 
+
 class UserReadWithPrompts(BaseModel):
     id: int
     name: str

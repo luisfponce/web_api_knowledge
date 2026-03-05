@@ -10,12 +10,17 @@ from passlib.hash import sha256_crypt
 
 router = APIRouter()
 
+
 # curl -X POST "http://localhost:8000/login?username=lfponcen&password=lfponcen" -v  <-- to get the session_token thru the cookie
 # curl -b session_token=(gotten from verbose) -X GET "http://localhost:8000"
 @router.get("", response_model=list[User])
-def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
-               session: Session = Depends(get_session),
-               current_user: dict = Depends(get_current_user)):
+def read_users(
+    phone: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 10,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     statement = select(User).offset(skip).limit(limit)
     # If phone is provided, filter by phone number
     if phone:
@@ -27,8 +32,11 @@ def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
 
 
 @router.get("/{user_id}", response_model=User)
-def get_user(user_id: int, session: Session = Depends(get_session),
-               current_user: dict = Depends(get_current_user)):
+def get_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -36,8 +44,11 @@ def get_user(user_id: int, session: Session = Depends(get_session),
 
 
 @router.get("/prompts/{user_id}", response_model=UserReadWithPrompts)
-def get_user_with_prompts(user_id: int, session: Session = Depends(get_session),
-               current_user: dict = Depends(get_current_user)):
+def get_user_with_prompts(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     statement = select(User).where(User.id == user_id)
     result = session.exec(statement)
     user = result.one_or_none()
@@ -47,10 +58,14 @@ def get_user_with_prompts(user_id: int, session: Session = Depends(get_session),
     _ = user.prompts
     return user
 
+
 @router.put("/{user_id}", response_model=User)
-def update_user(user_id: int, user: User,
-                session: Session = Depends(get_session),
-                current_user: dict = Depends(get_current_user)):
+def update_user(
+    user_id: int,
+    user: User,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     user.name = user.name.lower()
     user.last_name = user.last_name.lower()
     existing_user = session.get(User, user_id)
@@ -72,8 +87,11 @@ def update_user(user_id: int, user: User,
 
 
 @router.delete("/{user_id}")
-def delete_user(user_id: int, session: Session = Depends(get_session),
-                current_user: dict = Depends(get_current_user)):
+def delete_user(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     try:
         user = session.get(User, user_id)
         if not user:

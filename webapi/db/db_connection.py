@@ -1,5 +1,6 @@
 from sqlmodel import SQLModel, create_engine, Session
 from core import config
+
 # from sqlalchemy.ext.asyncio import AsyncSession
 
 connect_args = {"check_same_thread": False}

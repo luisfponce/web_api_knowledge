@@ -1,0 +1,17 @@
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+include = '\\.pyi?$'
+extend-exclude = '''
+/(\
+  \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["webapi/tests"]
+python_files = ["test_*.py"]
+addopts = "-q"

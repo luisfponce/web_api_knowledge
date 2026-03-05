@@ -38,10 +38,11 @@ def crear_jwt(data: dict):
     payload = {
         "exp": datetime.utcnow() + timedelta(hours=1),
         "iat": datetime.utcnow(),
-        "data": data
+        "data": data,
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return token
+
 
 # Validar un token con prefijo "Bearer" (compatibilidad legado)
 def validar_jwt(token: str):
@@ -91,4 +92,3 @@ def get_current_user(
     if not data:
         raise HTTPException(status_code=401, detail="Unauthorized token")
     return data
-    
