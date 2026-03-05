@@ -40,8 +40,8 @@ REDIS_DECODE_RESP = True
 
 # MariaDB server
 # Ensure that the environment variable DB_URL is set to your MariaDB connection string
-# Example: export DB_URL="mariadb+mariadbconnector://user:psw@127.0.0.1:3306/bank_db"
+# Example: export DB_URL="mariadb+mariadbconnector://user:psw@127.0.0.1:3306/crud_data"
 
 DB_URL = os.getenv("DB_URL")
 if not DB_URL:
-    DB_URL = "sqlite:///./bank_db.db"  # Default to SQLite if no environment variable is set
+    DB_URL = "sqlite:///./crud_data.db"  # Default to SQLite if no environment variable is set

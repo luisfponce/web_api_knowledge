@@ -27,22 +27,6 @@ myapp = FastAPI(
     openapi_tags=tags_metadata
 )
 
-"""
-Create a MariaDB container for testing purposes.
-You can run this command in your terminal to start a MariaDB server with the specified environment variables
-and port mapping. Make sure Docker is installed and running on your machine.
-docker run --detach \
-  --env MARIADB_USER=pbtest \
-  --env MARIADB_PASSWORD=pbtest \
-  --env MARIADB_DATABASE=bank_db \
-  --env MARIADB_RANDOM_ROOT_PASSWORD=1 \
-  --name mariadb-server-test \
-  -p 3306:3306 \
-  mariadb:latest
-
-Ensure that the environment variable DB_URL is set to your MariaDB connection string
-Example: export DB_URL="mariadb+mariadbconnector://pbtest:pbtest@127.0.0.1:3306/bank_db"
-"""
 
 @myapp.get("/")
 def root():
