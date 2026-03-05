@@ -1,15 +1,17 @@
-from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Optional
-from sqlmodel import Session, select
-from models.user import User
-from db.db_connection import get_session
-from datetime import datetime, timedelta
-import jwt
-from passlib.hash import sha256_crypt
 import re
-from dotenv import load_dotenv
+from datetime import datetime, timedelta
+from typing import Optional
+
+import jwt
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from passlib.hash import sha256_crypt
+from sqlmodel import Session, select
+
 from core import config
+from db.db_connection import get_session
+from dotenv import load_dotenv
+from models.user import User
 
 load_dotenv()
 
@@ -43,6 +45,7 @@ def crear_jwt(data: dict):
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return token
 
+
 # Validar un token con prefijo "Bearer" (compatibilidad legado)
 def validar_jwt(token: str):
     try:
@@ -60,7 +63,7 @@ def validar_jwt(token: str):
         return None
     except jwt.InvalidTokenError:
         return None
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return None
 
 
@@ -75,7 +78,7 @@ def validar_jwt_raw(token: str):
         return None
     except jwt.InvalidTokenError:
         return None
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         return None
 
 
@@ -91,4 +94,3 @@ def get_current_user(
     if not data:
         raise HTTPException(status_code=401, detail="Unauthorized token")
     return data
-    
