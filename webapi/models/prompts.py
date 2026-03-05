@@ -1,6 +1,7 @@
 from typing import Optional
-from sqlmodel import SQLModel, Field, Relationship
-import models
+
+from sqlmodel import Field, Relationship, SQLModel
+
 
 
 class Prompts(SQLModel, table=True):
