@@ -126,7 +126,9 @@ def test_generate_password_key_exists_returns_400(client, db_session, fake_redis
     assert response.json()["detail"] == "Key already exists"
 
 
-def test_generate_password_success_saves_password_and_calls_email(client, db_session, fake_redis, monkeypatch):
+def test_generate_password_success_saves_password_and_calls_email(
+    client, db_session, fake_redis, monkeypatch
+):
     user = User(
         username="mail_user",
         name="mail",

@@ -11,4 +11,3 @@ def test_run_functional_suite():
         check=False,
     )
     assert result.returncode == 0
-

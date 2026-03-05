@@ -9,12 +9,13 @@ from infrastructure.email.smtp_service import send_email
 
 router = APIRouter()
 
+
 @router.post("", response_model=Prompts)
 async def create_prompt(
     prompt: Prompts,
     session: Session = Depends(get_session),
     current_user: dict = Depends(get_current_user),
-    send_email_header: Optional[str] = Header("false", alias="send_email")
+    send_email_header: Optional[str] = Header("false", alias="send_email"),
 ):
     # Ensure the user exists before creating a prompt
     user = session.get(User, prompt.user_id)
@@ -34,10 +35,14 @@ async def create_prompt(
 
     return prompt
 
+
 @router.get("", response_model=list[Prompts])
-def read_prompts(skip: int = 0, limit: int = 10,
-               session: Session = Depends(get_session),
-               current_user: dict = Depends(get_current_user)):
+def read_prompts(
+    skip: int = 0,
+    limit: int = 10,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     statement = select(Prompts).offset(skip).limit(limit)
     prompts = session.exec(statement).all()
     if not prompts:
@@ -46,17 +51,24 @@ def read_prompts(skip: int = 0, limit: int = 10,
 
 
 @router.get("/{prompt_id}", response_model=Prompts)
-def get_prompt(prompt_id: int, session: Session = Depends(get_session),
-               current_user: dict = Depends(get_current_user)):
+def get_prompt(
+    prompt_id: int,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     prompt = session.get(Prompts, prompt_id)
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
     return prompt
 
+
 @router.put("/{prompt_id}", response_model=Prompts)
-def update_prompt(prompt_id: int, prompt: Prompts,
-                session: Session = Depends(get_session),
-                current_user: dict = Depends(get_current_user)):
+def update_prompt(
+    prompt_id: int,
+    prompt: Prompts,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     existing_prompt = session.get(Prompts, prompt_id)
     if not existing_prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
@@ -75,8 +87,11 @@ def update_prompt(prompt_id: int, prompt: Prompts,
 
 
 @router.delete("/{prompt_id}")
-def delete_prompt(prompt_id: int, session: Session = Depends(get_session),
-                current_user: dict = Depends(get_current_user)):
+def delete_prompt(
+    prompt_id: int,
+    session: Session = Depends(get_session),
+    current_user: dict = Depends(get_current_user),
+):
     prompt = session.get(Prompts, prompt_id)
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found to delete")

@@ -12,6 +12,5 @@ class Prompts(SQLModel, table=True):
     rate: str = Field(max_length=30, nullable=False)
 
     user: Optional["User"] = Relationship(
-        sa_relationship_kwargs={"lazy": "selectin"},
-        back_populates="prompts"
+        sa_relationship_kwargs={"lazy": "selectin"}, back_populates="prompts"
     )

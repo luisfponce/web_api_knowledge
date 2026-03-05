@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 import uvicorn
 from api.routers import api_router
+
 # from api.endpoints.v1 import auths, users, prompts
 
 tags_metadata = [
@@ -24,7 +25,7 @@ myapp = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_tags=tags_metadata
+    openapi_tags=tags_metadata,
 )
 
 """
@@ -43,6 +44,7 @@ docker run --detach \
 Ensure that the environment variable DB_URL is set to your MariaDB connection string
 Example: export DB_URL="mariadb+mariadbconnector://pbtest:pbtest@127.0.0.1:3306/bank_db"
 """
+
 
 @myapp.get("/")
 def root():

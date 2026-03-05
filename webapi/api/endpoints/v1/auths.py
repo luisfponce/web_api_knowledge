@@ -31,14 +31,13 @@ def signup(user: User, session: Session = Depends(get_session)):
     session.refresh(user)
     return {"message": "User created successfully"}
 
+
 @router.post("/login")
 def login(request: LoginRequest, session: Session = Depends(get_session)):
     user = authenticate_user(request.username, request.password, session)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
-    access_token = crear_jwt(
-        data={"sub": user.username}
-    )
+    access_token = crear_jwt(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -46,12 +45,13 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
 def profile(current_user: dict = Depends(get_current_user)):
     return {"profile data": current_user}
 
+
 @router.post("/generate")
 async def generate_password(
     username: str,
     ttl: int = 300,
     redis: Redis = Depends(get_redis),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
     statement = select(User).where(User.username == username)
     result = session.exec(statement)
@@ -60,7 +60,7 @@ async def generate_password(
         raise HTTPException(status_code=404, detail="User not found")
 
     """Generate random key"""
-    encoded = base64.b64encode(username.encode('utf-8')).decode('utf-8')
+    encoded = base64.b64encode(username.encode("utf-8")).decode("utf-8")
     key = f"{secrets.token_hex(16)}.{encoded}"
     if redis.exists(key):
         raise HTTPException(status_code=400, detail="Key already exists")
@@ -70,17 +70,18 @@ async def generate_password(
     session.add(user)
     session.commit()
     session.refresh(user)
-    email_body = f"Hey {user.username} this is your recovery key:\n--> {key} <--\nit expires in {ttl/60}"
+    email_body = (
+        f"Hey {user.username} this is your recovery key:\n--> {key} <--\nit expires in {ttl/60}"
+    )
     await send_email(user.email, user.username, email_body)
     redis.setex(key, ttl, password)
 
     return {f"Message sent successfully, it expires in {ttl/60} minutes"}
 
+
 @router.post("/recover")
 def recover_password(
-    key: str,
-    redis: Redis = Depends(get_redis),
-    session: Session = Depends(get_session)
+    key: str, redis: Redis = Depends(get_redis), session: Session = Depends(get_session)
 ):
 
     match = re.search(r"\.(.+)$", key)
@@ -94,7 +95,7 @@ def recover_password(
     if missing_padding:
         username += "=" * (4 - missing_padding)
     try:
-        username = base64.b64decode(username).decode('utf-8')
+        username = base64.b64decode(username).decode("utf-8")
     except (binascii.Error, UnicodeDecodeError) as e:
         raise HTTPException(status_code=401, detail=f"Decode error: {e}")
     statement = select(User).where(User.username == username)
