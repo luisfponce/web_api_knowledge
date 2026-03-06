@@ -34,9 +34,7 @@ jobs:
         ENV_MAIL_PASSWORD: ${{ secrets.ENV_MAIL_PASSWORD }}
         ENV_SECRET_KEY: ${{ secrets.ENV_SECRET_KEY }}
       run: |
-        cd webapi
-        if [ -f crud_data.db ]; then rm -f crud_data.db; fi
-        pytest tests/test_release.py -v
+        pytest webapi/tests/test_release.py -vv -ra
 
   container-smoke-test:
     name: Container Build & Healthcheck Smoke Test
