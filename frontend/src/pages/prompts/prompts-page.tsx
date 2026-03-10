@@ -28,17 +28,17 @@ export function PromptsPage() {
     const promptsQuery = useQuery({
         queryKey: ['prompts', userId],
         queryFn: async () => {
-            if (!token || !userId) {
+            if (!token || userId === null) {
                 return []
             }
             return listPrompts(token, userId)
         },
-        enabled: Boolean(token && userId),
+        enabled: Boolean(token) && userId !== null,
     })
 
     const createMutation = useMutation({
         mutationFn: async (value: PromptInput) => {
-            if (!token || !userId) {
+            if (!token) {
                 throw new Error('Session is not available')
             }
             return createPrompt(token, userId, value)
@@ -54,7 +54,7 @@ export function PromptsPage() {
 
     const updateMutation = useMutation({
         mutationFn: async (value: PromptInput) => {
-            if (!token || !userId || !editingPrompt) {
+            if (!token || userId === null || !editingPrompt) {
                 throw new Error('Session or selected prompt is not available')
             }
             return updatePrompt(token, editingPrompt.id, userId, value)
@@ -129,4 +129,3 @@ export function PromptsPage() {
         </section>
     )
 }
-

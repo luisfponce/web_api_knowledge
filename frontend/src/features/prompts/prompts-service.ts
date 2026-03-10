@@ -37,13 +37,16 @@ export async function listPrompts(
 
 export function createPrompt(
     token: string,
-    userId: number,
+    userId: number | null,
     input: PromptInput,
 ): Promise<PromptRecord> {
+    const payload =
+        userId === null ? input : { ...input, user_id: userId }
+
     return apiRequest<PromptRecord>('/prompts', {
         method: 'POST',
         token,
-        body: JSON.stringify({ ...input, user_id: userId }),
+        body: JSON.stringify(payload),
     })
 }
 
