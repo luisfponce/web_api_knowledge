@@ -6,24 +6,39 @@ from models.prompts import Prompts
 from db.db_connection import get_session
 from auth.auth_service import get_current_user
 from infrastructure.email.smtp_service import send_email
+from schemas.prompt_schema import PromptCreate
 
 router = APIRouter()
 
 @router.post("", response_model=Prompts)
 async def create_prompt(
-    prompt: Prompts,
+    prompt: PromptCreate,
     session: Session = Depends(get_session),
     current_user: dict = Depends(get_current_user),
     send_email_header: Optional[str] = Header("false", alias="send_email")
 ):
-    # Ensure the user exists before creating a prompt
-    user = session.get(User, prompt.user_id)
+    username = current_user.get("sub") if isinstance(current_user, dict) else None
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    user = session.exec(select(User).where(User.username == username)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    session.add(prompt)
+    if prompt.user_id is not None and prompt.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Cannot create prompts for another user")
+
+    created_prompt = Prompts(
+        user_id=user.id,
+        model_name=prompt.model_name,
+        prompt_text=prompt.prompt_text,
+        category=prompt.category,
+        rate=prompt.rate,
+    )
+
+    session.add(created_prompt)
     session.commit()
-    session.refresh(prompt)
+    session.refresh(created_prompt)
 
     # Email notification is best-effort and should not block prompt persistence.
     if str(send_email_header).lower() == "true":
@@ -32,7 +47,7 @@ async def create_prompt(
         except Exception:
             pass
 
-    return prompt
+    return created_prompt
 
 @router.get("", response_model=list[Prompts])
 def read_prompts(skip: int = 0, limit: int = 10,
