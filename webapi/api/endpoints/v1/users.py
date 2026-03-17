@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from models.user import User
 from typing import Optional
-from schemas.user_schema import UserReadWithPrompts
+from schemas.user_schema import UserRead, UserReadWithPrompts
 from db.db_connection import get_session
 from auth.auth_service import get_current_user
 from passlib.hash import sha256_crypt
@@ -10,7 +10,7 @@ from passlib.hash import sha256_crypt
 
 router = APIRouter()
 
-@router.get("", response_model=list[User])
+@router.get("", response_model=list[UserRead])
 def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
                session: Session = Depends(get_session),
                current_user: dict = Depends(get_current_user)):
@@ -24,7 +24,7 @@ def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
     return users
 
 
-@router.get("/{user_id}", response_model=User)
+@router.get("/{user_id}", response_model=UserRead)
 def get_user(user_id: int, session: Session = Depends(get_session),
                current_user: dict = Depends(get_current_user)):
     user = session.get(User, user_id)

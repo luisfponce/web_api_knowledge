@@ -21,3 +21,7 @@ htmlcov/
 
 # Environment variables
 .env
+
+# Local runtime logs
+backend.log
+frontend.log
