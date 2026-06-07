@@ -1,0 +1,47 @@
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root_password
+      MARIADB_DATABASE: crud_data
+      MARIADB_USER: webapi_user
+      MARIADB_PASSWORD: webapi_password
+    ports:
+      - "${MARIADB_HOST_PORT:-3306}:3306"
+    volumes:
+      - webapi-mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "webapi_user", "-pwebapi_password" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build:
+      context: .
+    environment:
+      DB_URL: mariadb+mariadbconnector://webapi_user:webapi_password@mariadb:3306/crud_data
+    ports:
+      - "8000:8000"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8000/" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  webapi-mariadb-data:

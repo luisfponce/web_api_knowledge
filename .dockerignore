@@ -1,0 +1,15 @@
+.git
+.kilo
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.venv
+venv
+crud_data.db
+frontend/node_modules
+frontend/dist
+frontend/.vite
+node_modules
+dist
