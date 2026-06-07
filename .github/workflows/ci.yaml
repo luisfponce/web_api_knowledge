@@ -27,6 +27,21 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Patch fastapi-mail SecretStr import
+      run: |
+        python - <<'PY'
+        from pathlib import Path
+        import site
+
+        paths = [Path(path) / "fastapi_mail" / "config.py" for path in site.getsitepackages()]
+        path = next(path for path in paths if path.exists())
+        text = path.read_text()
+        text = text.replace(
+            "from pydantic import FilePath, DirectoryPath, EmailStr, conint",
+            "from pydantic import FilePath, DirectoryPath, EmailStr, SecretStr, conint",
+        )
+        path.write_text(text)
+        PY
     - name: Run pytest (CI only)
       env:
         ENV_MAIL_USERNAME: ${{ secrets.ENV_MAIL_USERNAME }}

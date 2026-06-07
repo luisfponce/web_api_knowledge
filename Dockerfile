@@ -20,8 +20,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
  && pip install --no-cache-dir -r requirements.txt \
- # Below line is to workaround error: `MAIL_PASSWORD: SecretStr -> NameError: name 'SecretStr' is not defined`
- && pip install --no-cache-dir -U fastapi-mail
+ && python -c "import site; from pathlib import Path; paths = [Path(p) / 'fastapi_mail' / 'config.py' for p in site.getsitepackages()]; path = next(p for p in paths if p.exists()); text = path.read_text(); text = text.replace('from pydantic import FilePath, DirectoryPath, EmailStr, conint', 'from pydantic import FilePath, DirectoryPath, EmailStr, SecretStr, conint'); path.write_text(text)"
 
 # Copy application code last
 COPY webapi/ .
