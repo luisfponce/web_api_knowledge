@@ -25,8 +25,12 @@ async def create_prompt(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if prompt.user_id is not None and prompt.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Cannot create prompts for another user")
+    if prompt.user_id is not None:
+        prompt_user = session.get(User, prompt.user_id)
+        if not prompt_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if prompt_user.id != user.id:
+            raise HTTPException(status_code=403, detail="Cannot create prompts for another user")
 
     created_prompt = Prompts(
         user_id=user.id,
