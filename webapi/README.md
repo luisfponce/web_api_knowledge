@@ -1,0 +1,261 @@
+# WebAPI Backend
+
+## Overview
+
+The backend is a FastAPI app with users, auth, prompts, SQLModel persistence, MariaDB support, and a SQLite fallback. The ASGI app object is `myapp` in [`main.py`](main.py), and API routes are mounted under `/api/v1`.
+
+## Requirements
+
+- Python 3.12.
+- MariaDB client/build system packages when installing the backend dependencies locally.
+- Python dependencies from the root [`requirements.txt`](../requirements.txt).
+
+## Local Development Without Docker
+
+Use this flow when developing the FastAPI backend directly on your machine.
+
+Create and activate a virtual environment from the repository root:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Run the backend from `webapi/`:
+
+```bash
+cd webapi
+uvicorn main:myapp --reload --host 127.0.0.1 --port 8000
+```
+
+By default, the app uses SQLite because `DB_URL` is unset. This creates `webapi/crud_data.db`, which is convenient for local development.
+
+To use a local MariaDB server instead, create the database and user first, then export `DB_URL` before starting Uvicorn:
+
+```bash
+export DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@127.0.0.1:3306/crud_data"
+uvicorn main:myapp --reload --host 127.0.0.1 --port 8000
+```
+
+The local backend is available at `http://127.0.0.1:8000`, with API routes under `http://127.0.0.1:8000/api/v1`. Redis is only required for password recovery endpoints; most auth, users, and prompts development can run without starting Redis.
+
+## Run With Docker Compose
+
+The recommended workflow is the full-stack Compose script from the repository root:
+
+```bash
+./scripts/run-compose-stack.sh
+```
+
+Compose starts MariaDB, the FastAPI backend, and the nginx frontend. Inside the Compose network, the backend connects to the database host `mariadb`, and frontend nginx proxies API requests to the backend service name `backend`.
+
+Backend URLs:
+
+- Direct backend: `http://127.0.0.1:8000`
+- API through frontend proxy: `http://127.0.0.1:8080/api/v1/...`
+- MariaDB host port: `127.0.0.1:3306` by default
+
+Manual Compose startup from the repository root:
+
+```bash
+docker compose up --build -d
+docker compose ps
+docker compose logs backend
+```
+
+Use `docker-compose` instead of `docker compose` if your environment only has the legacy command.
+
+Override the published MariaDB host port for local inspection when needed:
+
+```bash
+MARIADB_HOST_PORT=3307 docker compose up --build -d
+```
+
+Stop or reset the Compose stack:
+
+```bash
+docker compose down
+docker compose down -v
+```
+
+`docker compose down -v` removes the database volume too.
+
+## Backend Docker Image
+
+Build the backend image from the repository root because the root [`Dockerfile`](../Dockerfile) copies both [`requirements.txt`](../requirements.txt) and `webapi/`:
+
+```bash
+docker build -t webapi:dev .
+```
+
+Run a standalone SQLite smoke test:
+
+```bash
+docker run --rm -p 8000:8000 webapi:dev
+```
+
+The backend uses `DB_URL` for MariaDB. If `DB_URL` is unset, it falls back to SQLite at `sqlite:///./crud_data.db`.
+
+## Manual MariaDB And Backend Docker Flow
+
+Use this advanced reference flow only when you need to run backend and MariaDB outside Compose.
+
+Build the backend image from the repository root:
+
+```bash
+docker build -t webapi:dev .
+```
+
+Create a Docker network for the backend and database:
+
+```bash
+docker network create webapi-net || true
+```
+
+Start MariaDB:
+
+```bash
+docker run -d --name webapi-mariadb --network webapi-net -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root_password -e MARIADB_DATABASE=crud_data -e MARIADB_USER=webapi_user -e MARIADB_PASSWORD=webapi_password -v webapi-mariadb-data:/var/lib/mysql mariadb:11
+```
+
+Wait until MariaDB is ready:
+
+```bash
+docker exec webapi-mariadb mariadb-admin ping -h 127.0.0.1 -u webapi_user -pwebapi_password
+```
+
+Start the backend with `DB_URL` pointed at the MariaDB container hostname:
+
+```bash
+docker run --rm --name webapi-backend --network webapi-net -p 8000:8000 -e DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@webapi-mariadb:3306/crud_data" webapi:dev
+```
+
+Inside this Docker network, the database host is `webapi-mariadb`, not `127.0.0.1`.
+
+All-in-one manual startup after building the image:
+
+```bash
+docker network create webapi-net || true
+docker run -d --name webapi-mariadb --network webapi-net -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root_password -e MARIADB_DATABASE=crud_data -e MARIADB_USER=webapi_user -e MARIADB_PASSWORD=webapi_password -v webapi-mariadb-data:/var/lib/mysql mariadb:11
+docker exec webapi-mariadb mariadb-admin ping -h 127.0.0.1 -u webapi_user -pwebapi_password
+docker run --rm --name webapi-backend --network webapi-net -p 8000:8000 -e DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@webapi-mariadb:3306/crud_data" webapi:dev
+```
+
+## API Verification
+
+Use `http://127.0.0.1:8080/api/v1` when the full Compose stack is running and you want to verify frontend nginx proxying. Use `http://127.0.0.1:8000/api/v1` when checking the backend port directly.
+
+Check the frontend proxy with an intentionally invalid login request:
+
+```bash
+curl -i -X POST http://127.0.0.1:8080/api/v1/auth/login -H "Content-Type: application/json" -d '{}'
+```
+
+HTTP `422` confirms nginx forwarded the request to FastAPI and FastAPI returned validation errors.
+
+Check the backend root endpoint directly:
+
+```bash
+curl http://127.0.0.1:8000/
+```
+
+Create a user through the frontend proxy. Change `username`, `phone`, or `email` before rerunning because those fields must be unique:
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/auth/signup -H "Content-Type: application/json" -d '{"username":"demo_user_001","name":"Demo","last_name":"User","phone":"5550000001","email":"demo001@example.com","hashed_password":"demo-password"}'
+```
+
+Login and store the token without requiring `jq`:
+
+```bash
+TOKEN=$(curl -s -X POST http://127.0.0.1:8080/api/v1/auth/login -H "Content-Type: application/json" -d '{"username":"demo_user_001","password":"demo-password"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+```
+
+Create a prompt using the token. The `rate` field must be a string because the API schema defines it as text:
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/prompts -H "Content-Type: application/json" -H "Authorization: Bearer $TOKEN" -d '{"model_name":"gpt-demo","prompt_text":"Explain FastAPI in one sentence.","category":"demo","rate":"5"}'
+```
+
+Confirm prompts are readable through the API:
+
+```bash
+curl http://127.0.0.1:8080/api/v1/prompts -H "Authorization: Bearer $TOKEN"
+```
+
+For direct backend checks, replace `http://127.0.0.1:8080/api/v1` with `http://127.0.0.1:8000/api/v1` in the same API commands.
+
+## Database Access
+
+Open a MariaDB shell inside the Compose database service:
+
+```bash
+docker compose exec mariadb mariadb -u webapi_user -pwebapi_password crud_data
+```
+
+Use `docker-compose exec mariadb ...` if your environment only has the legacy Compose command.
+
+The startup script also prints a container lookup form for entering the Compose database container:
+
+```bash
+docker exec -ti $(docker ps -aqf "name=^/web_api_knowledge_mariadb*") mariadb -u webapi_user -pwebapi_password
+```
+
+If you are using the manual backend flow, use the named manual container instead:
+
+```bash
+docker exec -it webapi-mariadb mariadb -u webapi_user -pwebapi_password crud_data
+```
+
+Useful SQL checks:
+
+```sql
+SHOW TABLES;
+SELECT id, username, email FROM `user`;
+SELECT id, user_id, model_name, category, rate FROM prompts;
+```
+
+## Configuration
+
+- `DB_URL` controls the MariaDB connection. If unset, the backend defaults to SQLite at `sqlite:///./crud_data.db`.
+- JWT and mail settings are read in [`core/config.py`](core/config.py).
+- Redis is configured for `127.0.0.1:6379` in [`core/config.py`](core/config.py) and is only needed by password recovery endpoints.
+- The backend Docker image includes a deterministic `fastapi_mail/config.py` dependency patch after installing pinned requirements.
+
+## Troubleshooting
+
+If Compose startup fails with `Bind for :::3306 failed: port is already allocated`, another container or local database is already using MariaDB's host port. The startup script automatically chooses a fallback MariaDB port when the conflict is another Docker container. For manual Compose startup, set `MARIADB_HOST_PORT=3307` or another free port.
+
+Check running Docker containers:
+
+```bash
+docker ps --format 'table {{.Names}}\t{{.Ports}}'
+```
+
+If old manual backend workflow containers are running, remove them before starting Compose:
+
+```bash
+docker rm -f webapi-mariadb webapi-backend
+```
+
+If a previous Compose stack is running, stop it from the repository root:
+
+```bash
+docker compose down
+```
+
+Use `docker-compose down` if your environment only has the legacy Compose command.
+
+If port `8000` or `8080` is already allocated, stop the service using that port or edit `docker-compose.yml` to publish a different host port.
+
+If the backend logs show SQLite during the manual backend flow, confirm the backend `docker run` command includes `-e DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@webapi-mariadb:3306/crud_data"`.
+
+If the backend fails during manual startup, MariaDB may not be ready yet. Run the readiness check again, then restart the backend container.
+
+To reset manual database data too, remove the named volume:
+
+```bash
+docker volume rm webapi-mariadb-data
+```
