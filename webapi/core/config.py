@@ -1,10 +1,11 @@
 from fastapi_mail import ConnectionConfig
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 from schemas.email_schema import Settings
 from pydantic import ValidationError
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 settings = Settings()
 
@@ -13,7 +14,7 @@ try:
     smtp_conf = ConnectionConfig(
         MAIL_USERNAME=os.getenv("ENV_MAIL_USERNAME",settings.ENV_MAIL_USERNAME),
         MAIL_PASSWORD=os.getenv("ENV_MAIL_PASSWORD",settings.ENV_MAIL_PASSWORD),
-        MAIL_FROM=os.getenv("ENV_MAIL_USERNAME",settings.ENV_MAIL_FROM),
+        MAIL_FROM=os.getenv("ENV_MAIL_FROM", settings.ENV_MAIL_FROM),
         MAIL_FROM_NAME="Your App",
         MAIL_PORT=587,
         MAIL_SERVER="smtp.gmail.com",
@@ -33,9 +34,9 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 # Redis configuration
-REDIS_HOST = "127.0.0.1"
-REDIS_PORT = 6379
-REDIS_PSW = None
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PSW = os.getenv("REDIS_PSW") or None
 REDIS_DECODE_RESP = True
 
 # MariaDB server

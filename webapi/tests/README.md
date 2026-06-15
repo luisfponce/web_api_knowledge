@@ -2,7 +2,7 @@
 
 ## Overview
 
-Backend tests use pytest and FastAPI `TestClient`. [`conftest.py`](conftest.py) overrides database and Redis dependencies with in-memory SQLite and fake Redis for most route tests.
+Backend tests use pytest and FastAPI `TestClient`. [`conftest.py`](conftest.py) overrides database and Redis dependencies with in-memory SQLite and fake Redis for most route tests, so route tests do not require a real Redis server.
 
 ## Run From The Backend Directory
 

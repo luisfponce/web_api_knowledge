@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TIMEOUT_SECONDS=120
 BUILD_FLAG="--build"
+ENV_FILE="${COMPOSE_ENV_FILE:-${REPO_ROOT}/.env}"
+COMPOSE_ENV_ARGS=()
 
 log() {
   printf '[compose-stack] %s\n' "$*"
@@ -19,7 +21,7 @@ usage() {
   cat <<'USAGE'
 Usage: ./scripts/run-compose-stack.sh [--no-build] [--timeout SECONDS]
 
-Starts the MariaDB, backend, and frontend services with Docker Compose,
+Starts the MariaDB, Redis, backend, and frontend services with Docker Compose,
 waits for readiness, and verifies minimum connectivity.
 
 Options:
@@ -66,7 +68,110 @@ detect_compose() {
 }
 
 compose() {
-  "${COMPOSE_CMD[@]}" "$@"
+  "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "$@"
+}
+
+warn() {
+  printf '[compose-stack] WARNING: %s\n' "$*" >&2
+}
+
+is_set() {
+  local name="$1"
+  [[ -n "${!name+x}" && -n "${!name}" ]]
+}
+
+load_env_file() {
+  local line name value
+
+  if [[ ! -f "${ENV_FILE}" ]]; then
+    warn "No env file found at ${ENV_FILE}. Continuing with variables already exported in the shell. For local development, copy .env.example to .env and replace placeholder values."
+    return
+  fi
+
+  COMPOSE_ENV_ARGS=(--env-file "${ENV_FILE}")
+  log "Loading environment defaults from ${ENV_FILE}. Existing shell variables take precedence."
+
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    line="${line%$'\r'}"
+    [[ -z "${line}" || "${line}" =~ ^[[:space:]]*# ]] && continue
+    [[ "${line}" == export[[:space:]]* ]] && line="${line#export }"
+    [[ "${line}" == *=* ]] || continue
+
+    name="${line%%=*}"
+    value="${line#*=}"
+    name="${name//[[:space:]]/}"
+    [[ "${name}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+
+    if [[ ! -v "${name}" ]]; then
+      value="${value%"${value##*[![:space:]]}"}"
+      value="${value#"${value%%[![:space:]]*}"}"
+      if [[ "${value}" == \"*\" && "${value}" == *\" ]]; then
+        value="${value:1:${#value}-2}"
+      elif [[ "${value}" == \'*\' && "${value}" == *\' ]]; then
+        value="${value:1:${#value}-2}"
+      fi
+      export "${name}=${value}"
+    fi
+  done < "${ENV_FILE}"
+}
+
+check_environment() {
+  local missing=()
+  local placeholder=()
+  local important_vars=(
+    MARIADB_ROOT_PASSWORD
+    MARIADB_PASSWORD
+    DB_URL
+    ENV_MAIL_PASSWORD
+    ENV_SECRET_KEY
+  )
+  local recommended_vars=(
+    MARIADB_DATABASE
+    MARIADB_USER
+    REDIS_HOST
+    REDIS_PORT
+    ENV_MAIL_USERNAME
+    ENV_MAIL_FROM
+  )
+  local var
+
+  for var in "${important_vars[@]}"; do
+    if ! is_set "${var}"; then
+      missing+=("${var}")
+    fi
+  done
+
+  if (( ${#missing[@]} > 0 )); then
+    warn "Missing important environment variables: ${missing[*]}. Compose/application defaults will be used so deployment can continue."
+    warn "Components affected: MariaDB credentials use local placeholders when MARIADB_ROOT_PASSWORD or MARIADB_PASSWORD is missing; backend DB/JWT behavior depends on DB_URL and ENV_SECRET_KEY; SMTP mail services may fail or remain test-only when ENV_MAIL_PASSWORD is missing."
+    warn "Recommended setup: keep these keys in .env for local runs, inject them from platform secrets in production, and define them as CI/CD secrets for pipeline jobs that need the backend."
+  fi
+
+  for var in "${recommended_vars[@]}"; do
+    if ! is_set "${var}"; then
+      warn "${var} is not set; Compose/application defaults will be used where available."
+    fi
+  done
+
+  for var in "${important_vars[@]}" "${recommended_vars[@]}"; do
+    if is_set "${var}" && [[ "${!var}" == replace_with_* ]]; then
+      placeholder+=("${var}")
+    fi
+  done
+
+  if (( ${#placeholder[@]} > 0 )); then
+    warn "Placeholder values detected for: ${placeholder[*]}. This is acceptable only for isolated local or test runs. Replace them for shared, staging, or production deployments."
+  fi
+
+  if is_set DB_URL && [[ "${DB_URL}" != mariadb+mariadbconnector://* ]]; then
+    warn "DB_URL does not use the expected MariaDB connector prefix. The backend may use another database target; verify this is intentional for the current environment."
+  fi
+
+  if [[ "${ENV_MAIL_USERNAME:-}" == "test@example.com" || "${ENV_MAIL_FROM:-}" == "test@example.com" || "${ENV_MAIL_PASSWORD:-}" == replace_with_* || -z "${ENV_MAIL_PASSWORD:-}" ]]; then
+    warn "SMTP mail services may not send real email with test or placeholder ENV_MAIL_* values. Authentication, CRUD, and local stack health can still work if outbound email is not required."
+  fi
+
+  log "Environment configuration check completed."
 }
 
 wait_for_health() {
@@ -145,8 +250,17 @@ verify_api_proxy() {
 
 verify_database() {
   log "Checking MariaDB connectivity inside the Compose service..."
-  compose exec -T mariadb mariadb-admin ping -h 127.0.0.1 -u webapi_user -pwebapi_password >/dev/null
+  compose exec -T mariadb sh -c 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb-admin ping -h 127.0.0.1 -u "$MARIADB_USER" >/dev/null'
   log "MariaDB accepted ping."
+}
+
+verify_redis() {
+  local response
+
+  log "Checking Redis connectivity inside the Compose service..."
+  response="$(compose exec -T redis redis-cli ping)"
+  [[ "${response}" == "PONG" ]] || fail "Expected Redis PONG, got: ${response}"
+  log "Redis accepted ping."
 }
 
 docker_published_port_in_use() {
@@ -188,36 +302,47 @@ start_stack() {
 
   printf '\nDocker containers currently publishing ports:\n' >&2
   docker ps --format '  {{.Names}} {{.Ports}}' >&2 || true
-  printf '\nIf port 3306, 8000, or 8080 is already used by an old webapi container, stop it first.\n' >&2
-  printf 'Manual backend workflow cleanup example: docker rm -f webapi-mariadb webapi-backend\n' >&2
+  printf '\nIf port 3306, 6379, 8000, or 8080 is already used by an old webapi container, stop it first.\n' >&2
+  printf 'Manual backend workflow cleanup example: docker rm -f webapi-mariadb webapi-redis webapi-backend\n' >&2
+  if [[ -n "${BUILD_FLAG}" ]]; then
+    printf 'Redis port override example: REDIS_HOST_PORT=6380 %s up %s -d\n' "${COMPOSE_CMD[*]}" "${BUILD_FLAG}" >&2
+  else
+    printf 'Redis port override example: REDIS_HOST_PORT=6380 %s up -d\n' "${COMPOSE_CMD[*]}" >&2
+  fi
   printf 'Compose cleanup example: %s down\n' "${COMPOSE_CMD[*]}" >&2
   exit 1
 }
 
-detect_compose
-configure_ports
-
 cd "${REPO_ROOT}"
+
+detect_compose
+load_env_file
+check_environment
+configure_ports
 
 log "Using Compose command: ${COMPOSE_CMD[*]}"
 start_stack
 
 wait_for_health mariadb "${TIMEOUT_SECONDS}"
+wait_for_health redis "${TIMEOUT_SECONDS}"
 wait_for_health backend "${TIMEOUT_SECONDS}"
 wait_for_http "frontend" "http://127.0.0.1:8080/" "${TIMEOUT_SECONDS}"
 wait_for_http "backend direct endpoint" "http://127.0.0.1:8000/" "${TIMEOUT_SECONDS}"
 verify_api_proxy
 verify_database
+verify_redis
 
 log "Stack is ready."
 printf '\nURLs:\n'
 printf '  Frontend:               http://127.0.0.1:8080\n'
-printf '  Backend direct:         http://127.0.0.1:8000\n'
+printf '  Backend direct:         http://127.0.0.1:8000/docs\n'
 printf '  Backend through nginx:  http://127.0.0.1:8080/api/v1/...\n'
 printf '  MariaDB host port:      127.0.0.1:%s\n' "${MARIADB_HOST_PORT:-3306}"
+printf '  Redis host port:        127.0.0.1:%s\n' "${REDIS_HOST_PORT:-6379}"
 printf '\nUseful commands:\n'
 printf '  View services:  %s ps\n' "${COMPOSE_CMD[*]}"
-printf '  View logs:      %s logs backend frontend mariadb\n' "${COMPOSE_CMD[*]}"
+printf '  View logs:      %s logs backend frontend mariadb redis\n' "${COMPOSE_CMD[*]}"
+printf '  Check Redis:    %s exec redis redis-cli ping\n' "${COMPOSE_CMD[*]}"
 printf '  Stop stack:     %s down\n' "${COMPOSE_CMD[*]}"
 printf '  Reset DB:       %s down -v\n' "${COMPOSE_CMD[*]}"
-printf '  Get into DB container:  docker exec -ti $(docker ps -aqf "name=^/web_api_knowledge_mariadb*")  mariadb -u webapi_user -pwebapi_password \n'
+printf '  Get into DB container:  %s exec mariadb sh -c '\''MYSQL_PWD="$MARIADB_PASSWORD" mariadb "$MARIADB_DATABASE" -u "$MARIADB_USER"'\''\n' "${COMPOSE_CMD[*]}"
