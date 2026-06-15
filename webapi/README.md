@@ -70,7 +70,7 @@ docker rm -f webapi-redis
 To use a local MariaDB server instead, create the database and user first, then export `DB_URL` before starting Uvicorn:
 
 ```bash
-export DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@127.0.0.1:3306/crud_data"
+export DB_URL="mariadb+mariadbconnector://webapi_user:replace_with_local_database_password@127.0.0.1:3306/crud_data"
 uvicorn main:myapp --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -85,6 +85,14 @@ The recommended workflow is the full-stack Compose script from the repository ro
 ```
 
 Compose starts MariaDB, Redis, the FastAPI backend, and the nginx frontend. Inside the Compose network, the backend connects to the database host `mariadb` and Redis host `redis`, and frontend nginx proxies API requests to the backend service name `backend`.
+
+For local secret values, copy the root environment template and edit `.env` before starting Compose:
+
+```bash
+cp .env.example .env
+```
+
+Docker Compose reads the root `.env` file automatically for variable interpolation. The startup script also loads the same file into the shell environment before running Compose, and the backend loads it through `python-dotenv` when started directly with Python. Missing values produce warnings in the startup script, not hard failures, so basic local/test runs can continue with Compose fallbacks.
 
 Backend URLs:
 
@@ -155,19 +163,19 @@ docker network create webapi-net || true
 Start MariaDB:
 
 ```bash
-docker run -d --name webapi-mariadb --network webapi-net -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root_password -e MARIADB_DATABASE=crud_data -e MARIADB_USER=webapi_user -e MARIADB_PASSWORD=webapi_password -v webapi-mariadb-data:/var/lib/mysql mariadb:11
+docker run -d --name webapi-mariadb --network webapi-net -p 3306:3306 -e MARIADB_ROOT_PASSWORD=replace_with_local_root_password -e MARIADB_DATABASE=crud_data -e MARIADB_USER=webapi_user -e MARIADB_PASSWORD=replace_with_local_database_password -v webapi-mariadb-data:/var/lib/mysql mariadb:11
 ```
 
 Wait until MariaDB is ready:
 
 ```bash
-docker exec webapi-mariadb mariadb-admin ping -h 127.0.0.1 -u webapi_user -pwebapi_password
+docker exec webapi-mariadb sh -c 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb-admin ping -h 127.0.0.1 -u "$MARIADB_USER"'
 ```
 
 Start the backend with `DB_URL` pointed at the MariaDB container hostname:
 
 ```bash
-docker run --rm --name webapi-backend --network webapi-net -p 8000:8000 -e DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@webapi-mariadb:3306/crud_data" webapi:dev
+docker run --rm --name webapi-backend --network webapi-net -p 8000:8000 -e DB_URL="mariadb+mariadbconnector://webapi_user:replace_with_local_database_password@webapi-mariadb:3306/crud_data" webapi:dev
 ```
 
 Inside this Docker network, the database host is `webapi-mariadb`, not `127.0.0.1`.
@@ -176,9 +184,9 @@ All-in-one manual startup after building the image:
 
 ```bash
 docker network create webapi-net || true
-docker run -d --name webapi-mariadb --network webapi-net -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root_password -e MARIADB_DATABASE=crud_data -e MARIADB_USER=webapi_user -e MARIADB_PASSWORD=webapi_password -v webapi-mariadb-data:/var/lib/mysql mariadb:11
-docker exec webapi-mariadb mariadb-admin ping -h 127.0.0.1 -u webapi_user -pwebapi_password
-docker run --rm --name webapi-backend --network webapi-net -p 8000:8000 -e DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@webapi-mariadb:3306/crud_data" webapi:dev
+docker run -d --name webapi-mariadb --network webapi-net -p 3306:3306 -e MARIADB_ROOT_PASSWORD=replace_with_local_root_password -e MARIADB_DATABASE=crud_data -e MARIADB_USER=webapi_user -e MARIADB_PASSWORD=replace_with_local_database_password -v webapi-mariadb-data:/var/lib/mysql mariadb:11
+docker exec webapi-mariadb sh -c 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb-admin ping -h 127.0.0.1 -u "$MARIADB_USER"'
+docker run --rm --name webapi-backend --network webapi-net -p 8000:8000 -e DB_URL="mariadb+mariadbconnector://webapi_user:replace_with_local_database_password@webapi-mariadb:3306/crud_data" webapi:dev
 ```
 
 ## API Verification
@@ -230,21 +238,21 @@ For direct backend checks, replace `http://127.0.0.1:8080/api/v1` with `http://1
 Open a MariaDB shell inside the Compose database service:
 
 ```bash
-docker compose exec mariadb mariadb -u webapi_user -pwebapi_password crud_data
+docker compose exec mariadb sh -c 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb "$MARIADB_DATABASE" -u "$MARIADB_USER"'
 ```
 
 Use `docker-compose exec mariadb ...` if your environment only has the legacy Compose command.
 
-The startup script also prints a container lookup form for entering the Compose database container:
+The startup script also prints the matching Compose command for entering the database container:
 
 ```bash
-docker exec -ti $(docker ps -aqf "name=^/web_api_knowledge_mariadb*") mariadb -u webapi_user -pwebapi_password
+docker compose exec mariadb sh -c 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb "$MARIADB_DATABASE" -u "$MARIADB_USER"'
 ```
 
 If you are using the manual backend flow, use the named manual container instead:
 
 ```bash
-docker exec -it webapi-mariadb mariadb -u webapi_user -pwebapi_password crud_data
+docker exec -it webapi-mariadb sh -c 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb "$MARIADB_DATABASE" -u "$MARIADB_USER"'
 ```
 
 Useful SQL checks:
@@ -258,9 +266,18 @@ SELECT id, user_id, model_name, category, rate FROM prompts;
 ## Configuration
 
 - `DB_URL` controls the MariaDB connection. If unset, the backend defaults to SQLite at `sqlite:///./crud_data.db`.
+- Docker Compose passes `DB_URL` to the backend. Keep `DB_URL` aligned with `MARIADB_USER`, `MARIADB_PASSWORD`, and `MARIADB_DATABASE` when changing local database credentials.
 - JWT and mail settings are read in [`core/config.py`](core/config.py).
+- `ENV_MAIL_USERNAME`, `ENV_MAIL_PASSWORD`, `ENV_MAIL_FROM`, and `ENV_SECRET_KEY` should come from local `.env`, shell exports, CI secrets, or production secret management. Do not commit real values.
 - Redis is configured through `REDIS_HOST`, `REDIS_PORT`, and optional `REDIS_PSW` in [`core/config.py`](core/config.py). Local defaults are `127.0.0.1:6379`; Compose sets `REDIS_HOST=redis` for backend containers.
 - The backend Docker image includes a deterministic `fastapi_mail/config.py` dependency patch after installing pinned requirements.
+
+Scalable configuration approach:
+
+- Maintain `.env.example` as the single source of truth for supported keys and comments.
+- Use `.env` for direct local Python runs and local Compose runs.
+- Use CI/CD secrets and deployment-platform secrets for real environments instead of distributing `.env` files.
+- Prefer adding new configuration keys to `.env.example`, `docker-compose.yml`, and `webapi/core/config.py` together so all runtimes stay consistent.
 
 ## Troubleshooting
 
@@ -306,7 +323,7 @@ If an old manual Redis container is running, remove it before starting Compose:
 docker rm -f webapi-redis
 ```
 
-If the backend logs show SQLite during the manual backend flow, confirm the backend `docker run` command includes `-e DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@webapi-mariadb:3306/crud_data"`.
+If the backend logs show SQLite during the manual backend flow, confirm the backend `docker run` command includes a `DB_URL` value such as `mariadb+mariadbconnector://webapi_user:replace_with_local_database_password@webapi-mariadb:3306/crud_data`.
 
 If the backend fails during manual startup, MariaDB may not be ready yet. Run the readiness check again, then restart the backend container.
 
