@@ -19,7 +19,7 @@ usage() {
   cat <<'USAGE'
 Usage: ./scripts/run-compose-stack.sh [--no-build] [--timeout SECONDS]
 
-Starts the MariaDB, backend, and frontend services with Docker Compose,
+Starts the MariaDB, Redis, backend, and frontend services with Docker Compose,
 waits for readiness, and verifies minimum connectivity.
 
 Options:
@@ -149,6 +149,15 @@ verify_database() {
   log "MariaDB accepted ping."
 }
 
+verify_redis() {
+  local response
+
+  log "Checking Redis connectivity inside the Compose service..."
+  response="$(compose exec -T redis redis-cli ping)"
+  [[ "${response}" == "PONG" ]] || fail "Expected Redis PONG, got: ${response}"
+  log "Redis accepted ping."
+}
+
 docker_published_port_in_use() {
   local port="$1"
   local ports
@@ -188,8 +197,13 @@ start_stack() {
 
   printf '\nDocker containers currently publishing ports:\n' >&2
   docker ps --format '  {{.Names}} {{.Ports}}' >&2 || true
-  printf '\nIf port 3306, 8000, or 8080 is already used by an old webapi container, stop it first.\n' >&2
-  printf 'Manual backend workflow cleanup example: docker rm -f webapi-mariadb webapi-backend\n' >&2
+  printf '\nIf port 3306, 6379, 8000, or 8080 is already used by an old webapi container, stop it first.\n' >&2
+  printf 'Manual backend workflow cleanup example: docker rm -f webapi-mariadb webapi-redis webapi-backend\n' >&2
+  if [[ -n "${BUILD_FLAG}" ]]; then
+    printf 'Redis port override example: REDIS_HOST_PORT=6380 %s up %s -d\n' "${COMPOSE_CMD[*]}" "${BUILD_FLAG}" >&2
+  else
+    printf 'Redis port override example: REDIS_HOST_PORT=6380 %s up -d\n' "${COMPOSE_CMD[*]}" >&2
+  fi
   printf 'Compose cleanup example: %s down\n' "${COMPOSE_CMD[*]}" >&2
   exit 1
 }
@@ -203,21 +217,25 @@ log "Using Compose command: ${COMPOSE_CMD[*]}"
 start_stack
 
 wait_for_health mariadb "${TIMEOUT_SECONDS}"
+wait_for_health redis "${TIMEOUT_SECONDS}"
 wait_for_health backend "${TIMEOUT_SECONDS}"
 wait_for_http "frontend" "http://127.0.0.1:8080/" "${TIMEOUT_SECONDS}"
 wait_for_http "backend direct endpoint" "http://127.0.0.1:8000/" "${TIMEOUT_SECONDS}"
 verify_api_proxy
 verify_database
+verify_redis
 
 log "Stack is ready."
 printf '\nURLs:\n'
 printf '  Frontend:               http://127.0.0.1:8080\n'
-printf '  Backend direct:         http://127.0.0.1:8000\n'
+printf '  Backend direct:         http://127.0.0.1:8000/docs\n'
 printf '  Backend through nginx:  http://127.0.0.1:8080/api/v1/...\n'
 printf '  MariaDB host port:      127.0.0.1:%s\n' "${MARIADB_HOST_PORT:-3306}"
+printf '  Redis host port:        127.0.0.1:%s\n' "${REDIS_HOST_PORT:-6379}"
 printf '\nUseful commands:\n'
 printf '  View services:  %s ps\n' "${COMPOSE_CMD[*]}"
-printf '  View logs:      %s logs backend frontend mariadb\n' "${COMPOSE_CMD[*]}"
+printf '  View logs:      %s logs backend frontend mariadb redis\n' "${COMPOSE_CMD[*]}"
+printf '  Check Redis:    %s exec redis redis-cli ping\n' "${COMPOSE_CMD[*]}"
 printf '  Stop stack:     %s down\n' "${COMPOSE_CMD[*]}"
 printf '  Reset DB:       %s down -v\n' "${COMPOSE_CMD[*]}"
 printf '  Get into DB container:  docker exec -ti $(docker ps -aqf "name=^/web_api_knowledge_mariadb*")  mariadb -u webapi_user -pwebapi_password \n'

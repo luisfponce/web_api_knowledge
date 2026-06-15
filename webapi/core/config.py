@@ -33,9 +33,9 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 # Redis configuration
-REDIS_HOST = "127.0.0.1"
-REDIS_PORT = 6379
-REDIS_PSW = None
+REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_PSW = os.getenv("REDIS_PSW") or None
 REDIS_DECODE_RESP = True
 
 # MariaDB server

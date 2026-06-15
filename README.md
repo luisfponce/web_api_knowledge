@@ -6,7 +6,7 @@
 
 ## Quick Start
 
-The startup script deploys the frontend, backend, and MariaDB with Docker Compose, waits for service readiness, and verifies basic connectivity.
+The startup script deploys the frontend, backend, MariaDB, and Redis with Docker Compose, waits for service readiness, and verifies basic connectivity.
 
 ```bash
 ./scripts/run-compose-stack.sh
@@ -15,7 +15,7 @@ The startup script deploys the frontend, backend, and MariaDB with Docker Compos
 Primary URLs:
 
 - Frontend: `http://127.0.0.1:8080`
-- Backend direct: `http://127.0.0.1:8000`
+- Backend direct: `http://127.0.0.1:8000/docs`
 - API through frontend proxy: `http://127.0.0.1:8080/api/v1/...`
 
 Stop the stack from the repository root:
@@ -39,4 +39,4 @@ Use `docker-compose down` if your environment only has the legacy Compose comman
 - `webapi/`: FastAPI backend application, API routes, models, configuration, and database connections.
 - `webapi/tests/`: pytest suites for functional route tests and nonfunctional CI checks.
 - `scripts/`: local automation, including the full-stack Compose startup script.
-- `docker-compose.yml`: MariaDB, backend, and frontend service definitions for local full-stack runs.
+- `docker-compose.yml`: MariaDB, Redis, backend, and frontend service definitions for local full-stack runs.

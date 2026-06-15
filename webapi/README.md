@@ -8,6 +8,7 @@ The backend is a FastAPI app with users, auth, prompts, SQLModel persistence, Ma
 
 - Python 3.12.
 - MariaDB client/build system packages when installing the backend dependencies locally.
+- Redis for password recovery endpoints.
 - Python dependencies from the root [`requirements.txt`](../requirements.txt).
 
 ## Local Development Without Docker
@@ -32,6 +33,40 @@ uvicorn main:myapp --reload --host 127.0.0.1 --port 8000
 
 By default, the app uses SQLite because `DB_URL` is unset. This creates `webapi/crud_data.db`, which is convenient for local development.
 
+Password recovery endpoints require Redis. Start a local Redis container when working with `/api/v1/auth/generate` or `/api/v1/auth/recover`:
+
+```bash
+docker run -d --name webapi-redis -p 6379:6379 redis:7-alpine
+```
+
+Verify Redis is reachable:
+
+```bash
+docker exec webapi-redis redis-cli ping
+```
+
+Expected output:
+
+```text
+PONG
+```
+
+The backend defaults to `REDIS_HOST=127.0.0.1` and `REDIS_PORT=6379`, so no Redis environment variables are needed for this default container.
+
+If host port `6379` is unavailable, publish Redis on another local port and export the matching backend setting before starting Uvicorn:
+
+```bash
+docker run -d --name webapi-redis -p 6380:6379 redis:7-alpine
+export REDIS_HOST=127.0.0.1
+export REDIS_PORT=6380
+```
+
+Remove the local Redis container when done:
+
+```bash
+docker rm -f webapi-redis
+```
+
 To use a local MariaDB server instead, create the database and user first, then export `DB_URL` before starting Uvicorn:
 
 ```bash
@@ -39,7 +74,7 @@ export DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@127.0.0.1:
 uvicorn main:myapp --reload --host 127.0.0.1 --port 8000
 ```
 
-The local backend is available at `http://127.0.0.1:8000`, with API routes under `http://127.0.0.1:8000/api/v1`. Redis is only required for password recovery endpoints; most auth, users, and prompts development can run without starting Redis.
+The local backend is available at `http://127.0.0.1:8000`, with API routes under `http://127.0.0.1:8000/api/v1`. Most auth, users, and prompts development can run without Redis; only password recovery storage and retrieval require it.
 
 ## Run With Docker Compose
 
@@ -49,13 +84,14 @@ The recommended workflow is the full-stack Compose script from the repository ro
 ./scripts/run-compose-stack.sh
 ```
 
-Compose starts MariaDB, the FastAPI backend, and the nginx frontend. Inside the Compose network, the backend connects to the database host `mariadb`, and frontend nginx proxies API requests to the backend service name `backend`.
+Compose starts MariaDB, Redis, the FastAPI backend, and the nginx frontend. Inside the Compose network, the backend connects to the database host `mariadb` and Redis host `redis`, and frontend nginx proxies API requests to the backend service name `backend`.
 
 Backend URLs:
 
 - Direct backend: `http://127.0.0.1:8000`
 - API through frontend proxy: `http://127.0.0.1:8080/api/v1/...`
 - MariaDB host port: `127.0.0.1:3306` by default
+- Redis host port: `127.0.0.1:6379` by default
 
 Manual Compose startup from the repository root:
 
@@ -67,10 +103,12 @@ docker compose logs backend
 
 Use `docker-compose` instead of `docker compose` if your environment only has the legacy command.
 
-Override the published MariaDB host port for local inspection when needed:
+Override the published MariaDB or Redis host ports for local inspection when needed:
 
 ```bash
 MARIADB_HOST_PORT=3307 docker compose up --build -d
+REDIS_HOST_PORT=6380 docker compose up --build -d
+MARIADB_HOST_PORT=3307 REDIS_HOST_PORT=6380 docker compose up --build -d
 ```
 
 Stop or reset the Compose stack:
@@ -221,7 +259,7 @@ SELECT id, user_id, model_name, category, rate FROM prompts;
 
 - `DB_URL` controls the MariaDB connection. If unset, the backend defaults to SQLite at `sqlite:///./crud_data.db`.
 - JWT and mail settings are read in [`core/config.py`](core/config.py).
-- Redis is configured for `127.0.0.1:6379` in [`core/config.py`](core/config.py) and is only needed by password recovery endpoints.
+- Redis is configured through `REDIS_HOST`, `REDIS_PORT`, and optional `REDIS_PSW` in [`core/config.py`](core/config.py). Local defaults are `127.0.0.1:6379`; Compose sets `REDIS_HOST=redis` for backend containers.
 - The backend Docker image includes a deterministic `fastapi_mail/config.py` dependency patch after installing pinned requirements.
 
 ## Troubleshooting
@@ -237,7 +275,7 @@ docker ps --format 'table {{.Names}}\t{{.Ports}}'
 If old manual backend workflow containers are running, remove them before starting Compose:
 
 ```bash
-docker rm -f webapi-mariadb webapi-backend
+docker rm -f webapi-mariadb webapi-redis webapi-backend
 ```
 
 If a previous Compose stack is running, stop it from the repository root:
@@ -249,6 +287,24 @@ docker compose down
 Use `docker-compose down` if your environment only has the legacy Compose command.
 
 If port `8000` or `8080` is already allocated, stop the service using that port or edit `docker-compose.yml` to publish a different host port.
+
+If Compose startup fails because Redis host port `6379` is already allocated, use another host port:
+
+```bash
+REDIS_HOST_PORT=6380 docker compose up --build -d
+```
+
+Check Redis readiness in Compose:
+
+```bash
+docker compose exec redis redis-cli ping
+```
+
+If an old manual Redis container is running, remove it before starting Compose:
+
+```bash
+docker rm -f webapi-redis
+```
 
 If the backend logs show SQLite during the manual backend flow, confirm the backend `docker run` command includes `-e DB_URL="mariadb+mariadbconnector://webapi_user:webapi_password@webapi-mariadb:3306/crud_data"`.
 
