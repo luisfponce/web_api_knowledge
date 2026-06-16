@@ -8,11 +8,13 @@ import {
     type ReactNode,
 } from 'react'
 import { loginAndResolveUserId } from './auth-service'
+import type { UserRole } from './auth-types'
 
 type SessionState = {
     token: string | null
     username: string | null
     userId: number | null
+    role: UserRole | null
 }
 
 type AuthContextValue = {
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         token: null,
         username: null,
         userId: null,
+        role: null,
     })
 
     const login = useCallback(async (username: string, password: string) => {
@@ -41,11 +44,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
             token: resolved.token,
             username: resolved.username,
             userId: resolved.userId,
+            role: resolved.role,
         })
     }, [])
 
     const logout = useCallback(() => {
-        setSession({ token: null, username: null, userId: null })
+        setSession({ token: null, username: null, userId: null, role: null })
     }, [])
 
     const value = useMemo<AuthContextValue>(

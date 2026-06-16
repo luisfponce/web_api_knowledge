@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../features/auth/auth-store'
 import { applyTheme, getInitialTheme, type ThemeMode } from '../../lib/utils/theme'
 import { Button } from '../ui/button'
@@ -26,7 +27,17 @@ export function AppShell({ children }: AppShellProps) {
             <header className="topbar">
                 <strong>Prompt Manager</strong>
                 <div className="topbar-actions">
-                    <span className="muted">{session.username}</span>
+                    <NavLink className="nav-link" to="/app/prompts">
+                        Prompts
+                    </NavLink>
+                    {session.role === 'admin' || session.role === 'god' ? (
+                        <NavLink className="nav-link" to="/app/admin/prompts">
+                            Admin Monitor
+                        </NavLink>
+                    ) : null}
+                    <span className="muted">
+                        {session.username} · {session.role}
+                    </span>
                     <Button variant="ghost" onClick={toggleTheme}>
                         {theme === 'light' ? 'Dark' : 'Light'}
                     </Button>
@@ -39,4 +50,3 @@ export function AppShell({ children }: AppShellProps) {
         </div>
     )
 }
-

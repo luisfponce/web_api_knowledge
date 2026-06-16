@@ -1,11 +1,20 @@
 import { apiRequest } from '../../lib/http/api-client'
-import { extractUsernameFromToken } from '../../lib/utils/jwt'
-import type { LoginInput, LoginResponse, UserRecord } from './auth-types'
+import type {
+    LoginInput,
+    LoginResponse,
+    RecoveryGenerateInput,
+    RecoveryGenerateResponse,
+    RecoveryRedeemInput,
+    RecoveryRedeemResponse,
+    UserRecord,
+    UserRole,
+} from './auth-types'
 
 export type SessionResolved = {
     token: string
     username: string
     userId: number
+    role: UserRole
 }
 
 export async function loginAndResolveUserId(
@@ -16,44 +25,37 @@ export async function loginAndResolveUserId(
         body: JSON.stringify(input),
     })
 
-    const username = extractUsernameFromToken(login.access_token)
-    if (!username) {
-        throw new Error('Unable to read username from token')
-    }
-
-    const currentUser = await resolveUserByUsername(login.access_token, username)
+    const currentUser = await getCurrentUser(login.access_token)
 
     return {
         token: login.access_token,
-        username,
+        username: currentUser.username,
         userId: currentUser.id,
+        role: currentUser.role,
     }
 }
 
-const USERS_PAGE_SIZE = 100
+export function getCurrentUser(token: string): Promise<UserRecord> {
+    return apiRequest<UserRecord>('/auth/profile', {
+        method: 'GET',
+        token,
+    })
+}
 
-async function resolveUserByUsername(
-    token: string,
-    username: string,
-): Promise<UserRecord> {
-    for (let skip = 0; ; skip += USERS_PAGE_SIZE) {
-        const users = await apiRequest<UserRecord[]>(
-            `/users?skip=${skip}&limit=${USERS_PAGE_SIZE}`,
-            {
-                method: 'GET',
-                token,
-            },
-        )
+export function requestRecoveryKey(
+    input: RecoveryGenerateInput,
+): Promise<RecoveryGenerateResponse> {
+    return apiRequest<RecoveryGenerateResponse>('/auth/generate', {
+        method: 'POST',
+        body: JSON.stringify(input),
+    })
+}
 
-        const match = users.find((user) => user.username === username)
-        if (match) {
-            return match
-        }
-
-        if (users.length < USERS_PAGE_SIZE) {
-            break
-        }
-    }
-
-    throw new Error('User id not found for authenticated username')
+export function redeemRecoveryKey(
+    input: RecoveryRedeemInput,
+): Promise<RecoveryRedeemResponse> {
+    return apiRequest<RecoveryRedeemResponse>('/auth/recover', {
+        method: 'POST',
+        body: JSON.stringify(input),
+    })
 }

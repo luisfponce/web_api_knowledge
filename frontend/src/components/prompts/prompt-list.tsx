@@ -20,7 +20,7 @@ export function PromptList({ prompts, onEdit, onDelete }: PromptListProps) {
                         <h3>{prompt.model_name}</h3>
                         <p>{prompt.prompt_text}</p>
                         <p className="muted">
-                            {prompt.category} · Rate {prompt.rate}
+                            {prompt.category} · Rating {prompt.rate}/5
                         </p>
                     </div>
                     <div className="row gap-sm">
@@ -36,4 +36,3 @@ export function PromptList({ prompts, onEdit, onDelete }: PromptListProps) {
         </div>
     )
 }
-
