@@ -94,3 +94,30 @@ def get_current_user(
     if not data:
         raise HTTPException(status_code=401, detail="Unauthorized token")
     return data
+
+
+def get_current_db_user(
+    current_user: dict = Depends(get_current_user),
+    session: Session = Depends(get_session),
+) -> User:
+    username = current_user.get("sub") if isinstance(current_user, dict) else None
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    user = session.exec(select(User).where(User.username == username)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+
+
+def require_admin_or_god(current_user: User = Depends(get_current_db_user)) -> User:
+    if current_user.role not in {"admin", "god"}:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+
+def require_god(current_user: User = Depends(get_current_db_user)) -> User:
+    if current_user.role != "god":
+        raise HTTPException(status_code=403, detail="God access required")
+    return current_user

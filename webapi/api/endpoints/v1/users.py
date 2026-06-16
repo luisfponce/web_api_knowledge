@@ -24,15 +24,6 @@ def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
     return users
 
 
-@router.get("/{user_id}", response_model=UserRead)
-def get_user(user_id: int, session: Session = Depends(get_session),
-               current_user: dict = Depends(get_current_user)):
-    user = session.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
-
 @router.get("/prompts/{user_id}", response_model=UserReadWithPrompts)
 def get_user_with_prompts(user_id: int, session: Session = Depends(get_session),
                current_user: dict = Depends(get_current_user)):
@@ -43,6 +34,15 @@ def get_user_with_prompts(user_id: int, session: Session = Depends(get_session),
         raise HTTPException(status_code=404, detail="User not found")
     # Access prompts within session to trigger lazy load
     _ = user.prompts
+    return user
+
+
+@router.get("/{user_id}", response_model=UserRead)
+def get_user(user_id: int, session: Session = Depends(get_session),
+               current_user: dict = Depends(get_current_user)):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     return user
 
 @router.put("/{user_id}", response_model=User)

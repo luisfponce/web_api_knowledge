@@ -1,10 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Body, Query
 from sqlmodel import Session, select
 from models.user import User
-from typing import Optional
 from passlib.hash import sha256_crypt
 from db.db_connection import get_session
-from auth.auth_service import authenticate_user, crear_jwt, validar_jwt, get_current_user
+from auth.auth_service import authenticate_user, crear_jwt, get_current_user, get_current_db_user
 from infrastructure.email.smtp_service import send_email
 import secrets
 import base64
@@ -13,9 +12,20 @@ import binascii
 
 from redis import Redis
 from db.redis_connection import get_redis
+from pydantic import BaseModel, Field
 from schemas.login_schema import LoginRequest
+from schemas.user_schema import UserRead
 
 router = APIRouter()
+
+
+class RecoveryGenerateRequest(BaseModel):
+    username: str
+    ttl: int = Field(default=300, ge=60, le=3600)
+
+
+class RecoveryRedeemRequest(BaseModel):
+    key: str
 
 
 @router.post("/signup")
@@ -25,6 +35,8 @@ def signup(user: User, session: Session = Depends(get_session)):
     user_exists = result.one_or_none()
     if user_exists:
         raise HTTPException(status_code=400, detail="username already taken")
+    if user.role not in {"user", "admin", "god"}:
+        raise HTTPException(status_code=400, detail="invalid role")
     user.hashed_password = sha256_crypt.hash(user.hashed_password)
     session.add(user)
     session.commit()
@@ -37,30 +49,58 @@ def login(request: LoginRequest, session: Session = Depends(get_session)):
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     access_token = crear_jwt(
-        data={"sub": user.username}
+        data={"sub": user.username, "user_id": user.id, "role": user.role}
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.get("/profile")
-def profile(current_user: dict = Depends(get_current_user)):
+@router.get("/profile", response_model=UserRead)
+def profile(current_user: User = Depends(get_current_db_user)):
+    return current_user
+
+
+@router.get("/me", response_model=UserRead)
+def me(current_user: User = Depends(get_current_db_user)):
+    return current_user
+
+
+@router.get("/token-profile")
+def token_profile(current_user: dict = Depends(get_current_user)):
     return {"profile data": current_user}
+
+
+def _resolve_generate_request(body: RecoveryGenerateRequest | None, username: str | None, ttl: int) -> RecoveryGenerateRequest:
+    if body:
+        return body
+    if not username:
+        raise HTTPException(status_code=422, detail="username is required")
+    return RecoveryGenerateRequest(username=username, ttl=ttl)
+
+
+def _resolve_recover_request(body: RecoveryRedeemRequest | None, key: str | None) -> RecoveryRedeemRequest:
+    if body:
+        return body
+    if not key:
+        raise HTTPException(status_code=422, detail="key is required")
+    return RecoveryRedeemRequest(key=key)
 
 @router.post("/generate")
 async def generate_password(
-    username: str,
-    ttl: int = 300,
+    body: RecoveryGenerateRequest | None = Body(default=None),
+    username: str | None = Query(default=None),
+    ttl: int = Query(default=300, ge=60, le=3600),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session)
 ):
-    statement = select(User).where(User.username == username)
+    request = _resolve_generate_request(body, username, ttl)
+    statement = select(User).where(User.username == request.username)
     result = session.exec(statement)
     user = result.one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     """Generate random key"""
-    encoded = base64.b64encode(username.encode('utf-8')).decode('utf-8')
+    encoded = base64.b64encode(request.username.encode('utf-8')).decode('utf-8')
     key = f"{secrets.token_hex(16)}.{encoded}"
     if redis.exists(key):
         raise HTTPException(status_code=400, detail="Key already exists")
@@ -70,18 +110,21 @@ async def generate_password(
     session.add(user)
     session.commit()
     session.refresh(user)
-    email_body = f"Hey {user.username} this is your recovery key:\n--> {key} <--\nit expires in {ttl/60}"
+    email_body = f"Hey {user.username} this is your recovery key:\n--> {key} <--\nit expires in {request.ttl/60}"
     await send_email(user.email, user.username, email_body)
-    redis.setex(key, ttl, password)
+    redis.setex(key, request.ttl, password)
 
-    return {f"Message sent successfully, it expires in {ttl/60} minutes"}
+    return {"message": f"Message sent successfully, it expires in {request.ttl/60} minutes"}
 
 @router.post("/recover")
 def recover_password(
-    key: str,
+    body: RecoveryRedeemRequest | None = Body(default=None),
+    key: str | None = Query(default=None),
     redis: Redis = Depends(get_redis),
     session: Session = Depends(get_session)
 ):
+    request = _resolve_recover_request(body, key)
+    key = request.key
 
     match = re.search(r"\.(.+)$", key)
     if not match:

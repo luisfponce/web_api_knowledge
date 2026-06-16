@@ -10,6 +10,7 @@ class UserRead(BaseModel):
     last_name: str
     phone: Optional[int]
     email: str
+    role: str
 
     class Config:
         from_attributes = True
@@ -21,6 +22,7 @@ class UserReadWithPrompts(BaseModel):
     last_name: str
     phone: Optional[int]
     email: str
+    role: str
     prompts: List[PromptRead] = []
 
     class Config:
