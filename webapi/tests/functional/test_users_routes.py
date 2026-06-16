@@ -11,6 +11,7 @@ def test_read_users_success(client, auth_header, created_user):
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["id"] == created_user.id
+    assert "hashed_password" not in response.json()[0]
 
 
 def test_read_users_with_phone_filter_success(client, auth_header, created_user):
@@ -40,6 +41,7 @@ def test_get_user_success(client, auth_header, created_user):
 
     assert response.status_code == 200
     assert response.json()["id"] == created_user.id
+    assert "hashed_password" not in response.json()
 
 
 def test_get_user_missing_returns_404(client, auth_header):

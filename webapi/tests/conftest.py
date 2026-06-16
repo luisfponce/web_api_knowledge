@@ -111,7 +111,7 @@ def created_prompt(db_session, created_user):
         model_name="gpt-4.1",
         prompt_text="existing prompt",
         category="qa",
-        rate="high",
+        rate=5,
     )
     db_session.add(prompt)
     db_session.commit()

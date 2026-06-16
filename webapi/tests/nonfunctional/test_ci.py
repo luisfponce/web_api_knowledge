@@ -48,7 +48,7 @@ def test_register_prompt():
         "model_name": "gpt-4.1",
         "prompt_text": "Generate a test response",
         "category": "qa",
-        "rate": "high",
+        "rate": 5,
     },  headers=headers)
     assert response.status_code == 200
     assert response.json() == {
@@ -57,7 +57,7 @@ def test_register_prompt():
         "model_name": "gpt-4.1",
         "prompt_text": "Generate a test response",
         "category": "qa",
-        "rate": "high"
+        "rate": 5
     }
 
 def test_read_users():

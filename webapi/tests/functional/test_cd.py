@@ -1,14 +1,9 @@
-from fastapi.testclient import TestClient
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from main import myapp
 
-client = TestClient(myapp)
-
-
-def test_login_and_access_private():
+def test_login_and_access_private(client):
     # Ensure user exists; tolerate pre-existing data in local DB runs
     signup_response = client.post(
         "/api/v1/auth/signup",
@@ -41,7 +36,7 @@ def test_login_and_access_private():
     response = client.get("/api/v1/users", headers=headers)
     assert response.status_code == 200
 
-def test_failed_login_and_access_private():
+def test_failed_login_and_access_private(client):
     response = client.post("/api/v1/auth/login", json={  # <-- use json instead of data
         "username": "teest_non_admitable_user",
         "password": "teest_non_admitable_user"
