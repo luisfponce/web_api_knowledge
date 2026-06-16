@@ -1,10 +1,10 @@
 import { ApiError } from '../../lib/http/api-error'
 import { apiRequest } from '../../lib/http/api-client'
-import type { PromptInput, PromptRecord } from './prompts-types'
+import type { PromptFilters, PromptInput, PromptRecord } from './prompts-types'
 
 export async function listPrompts(
     token: string,
-    userId: number,
+    userId?: number,
 ): Promise<PromptRecord[]> {
     const pageSize = 100
     const userPrompts: PromptRecord[] = []
@@ -19,7 +19,9 @@ export async function listPrompts(
                 },
             )
 
-            userPrompts.push(...prompts.filter((prompt) => prompt.user_id === userId))
+            userPrompts.push(
+                ...prompts.filter((prompt) => userId === undefined || prompt.user_id === userId),
+            )
 
             if (prompts.length < pageSize) {
                 break
@@ -33,6 +35,44 @@ export async function listPrompts(
     }
 
     return userPrompts
+}
+
+export async function listAllPrompts(
+    token: string,
+    filters: PromptFilters = {},
+): Promise<PromptRecord[]> {
+    const pageSize = 100
+    const allPrompts: PromptRecord[] = []
+
+    for (let skip = 0; ; skip += pageSize) {
+        const params = new URLSearchParams({
+            skip: String(skip),
+            limit: String(pageSize),
+        })
+        if (filters.user_id !== undefined) params.set('user_id', String(filters.user_id))
+        if (filters.category) params.set('category', filters.category)
+        if (filters.model_name) params.set('model_name', filters.model_name)
+        if (filters.rate !== undefined) params.set('rate', String(filters.rate))
+
+        try {
+            const prompts = await apiRequest<PromptRecord[]>(`/prompts?${params}`, {
+                method: 'GET',
+                token,
+            })
+            allPrompts.push(...prompts)
+
+            if (prompts.length < pageSize) {
+                break
+            }
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 404) {
+                break
+            }
+            throw error
+        }
+    }
+
+    return allPrompts
 }
 
 export function createPrompt(

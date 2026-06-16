@@ -6,6 +6,10 @@ import { PromptForm } from '../../components/prompts/prompt-form'
 import { PromptList } from '../../components/prompts/prompt-list'
 import { useAuth } from '../../features/auth/auth-store'
 import {
+    listCategoryOptions,
+    listModelOptions,
+} from '../../features/options/options-service'
+import {
     createPrompt,
     deletePrompt,
     listPrompts,
@@ -34,6 +38,28 @@ export function PromptsPage() {
             return listPrompts(token, userId)
         },
         enabled: Boolean(token) && userId !== null,
+    })
+
+    const categoriesQuery = useQuery({
+        queryKey: ['options', 'categories'],
+        queryFn: async () => {
+            if (!token) {
+                return { items: [] }
+            }
+            return listCategoryOptions(token)
+        },
+        enabled: Boolean(token),
+    })
+
+    const modelsQuery = useQuery({
+        queryKey: ['options', 'models'],
+        queryFn: async () => {
+            if (!token) {
+                return { items: [] }
+            }
+            return listModelOptions(token)
+        },
+        enabled: Boolean(token),
     })
 
     const createMutation = useMutation({
@@ -107,11 +133,18 @@ export function PromptsPage() {
             <Card>
                 <h1>{editingPrompt ? 'Edit prompt' : 'Create prompt'}</h1>
                 <PromptForm
+                    key={editingPrompt?.id ?? 'new-prompt'}
                     initialValue={editingPrompt}
                     isSaving={createMutation.isPending || updateMutation.isPending}
+                    modelOptions={modelsQuery.data?.items ?? []}
+                    categoryOptions={categoriesQuery.data?.items ?? []}
+                    optionsLoading={categoriesQuery.isLoading || modelsQuery.isLoading}
                     onSubmit={handleSubmit}
                     onCancelEdit={() => setEditingPrompt(null)}
                 />
+                {categoriesQuery.error || modelsQuery.error ? (
+                    <InlineError message="Unable to load dropdown options" />
+                ) : null}
             </Card>
 
             <Card>

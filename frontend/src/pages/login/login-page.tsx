@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/card'
 import { InlineError } from '../../components/ui/inline-error'
 import { Button } from '../../components/ui/button'
@@ -59,6 +59,9 @@ export function LoginPage() {
                     <Button type="submit" disabled={loading}>
                         {loading ? 'Signing in...' : 'Sign in'}
                     </Button>
+                    <Link className="text-link" to="/recovery">
+                        Forgot password?
+                    </Link>
                 </form>
             </Card>
         </div>

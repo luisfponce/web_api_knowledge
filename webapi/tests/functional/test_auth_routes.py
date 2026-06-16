@@ -5,6 +5,7 @@ from sqlmodel import select
 
 from models.user import User
 import api.endpoints.v1.auths as auths_module
+from auth.auth_service import validar_jwt_raw
 
 
 def test_signup_success(client, user_payload, db_session):
@@ -48,6 +49,16 @@ def test_signup_duplicate_username_returns_400(client, db_session):
     assert response.json()["detail"] == "username already taken"
 
 
+def test_signup_invalid_role_returns_400(client, user_payload):
+    response = client.post(
+        "/api/v1/auth/signup",
+        json={**user_payload, "role": "superuser"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "invalid role"
+
+
 def test_login_success_returns_token(client, user_payload):
     client.post("/api/v1/auth/signup", json=user_payload)
 
@@ -59,6 +70,11 @@ def test_login_success_returns_token(client, user_payload):
     assert response.status_code == 200
     assert response.json()["token_type"] == "bearer"
     assert isinstance(response.json()["access_token"], str)
+
+    claims = validar_jwt_raw(response.json()["access_token"])
+    assert claims["sub"] == user_payload["username"]
+    assert isinstance(claims["user_id"], int)
+    assert claims["role"] == "user"
 
 
 def test_login_invalid_credentials_returns_401(client, db_session):
@@ -87,7 +103,17 @@ def test_profile_success(client, auth_header, created_user):
     response = client.get("/api/v1/auth/profile", headers=auth_header)
 
     assert response.status_code == 200
-    assert response.json()["profile data"]["sub"] == created_user.username
+    assert response.json()["username"] == created_user.username
+    assert response.json()["role"] == "user"
+
+
+def test_me_success(client, auth_header, created_user):
+    response = client.get("/api/v1/auth/me", headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.json()["id"] == created_user.id
+    assert response.json()["username"] == created_user.username
+    assert response.json()["role"] == "user"
 
 
 def test_profile_invalid_token_returns_401(client):
@@ -102,6 +128,21 @@ def test_generate_password_user_not_found_returns_404(client):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
+
+
+def test_generate_password_missing_username_returns_422(client):
+    response = client.post("/api/v1/auth/generate", json={})
+
+    assert response.status_code == 422
+
+
+def test_generate_password_invalid_ttl_returns_422(client):
+    response = client.post(
+        "/api/v1/auth/generate",
+        json={"username": "any_user", "ttl": 59},
+    )
+
+    assert response.status_code == 422
 
 
 def test_generate_password_key_exists_returns_400(client, db_session, fake_redis, monkeypatch):
@@ -120,7 +161,7 @@ def test_generate_password_key_exists_returns_400(client, db_session, fake_redis
     encoded = base64.b64encode(user.username.encode("utf-8")).decode("utf-8")
     fake_redis.store[f"fixedhex.{encoded}"] = "already_exists"
 
-    response = client.post("/api/v1/auth/generate", params={"username": user.username})
+    response = client.post("/api/v1/auth/generate", json={"username": user.username})
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Key already exists"
@@ -151,7 +192,7 @@ def test_generate_password_success_saves_password_and_calls_email(client, db_ses
     monkeypatch.setattr(auths_module.secrets, "token_urlsafe", lambda n: "temporary_pwd")
     monkeypatch.setattr(auths_module, "send_email", fake_send_email)
 
-    response = client.post("/api/v1/auth/generate", params={"username": user.username, "ttl": 600})
+    response = client.post("/api/v1/auth/generate", json={"username": user.username, "ttl": 600})
 
     assert response.status_code == 200
     assert called["value"] is True
@@ -187,10 +228,16 @@ def test_generate_password_email_failure_returns_500(client, db_session, monkeyp
 
 
 def test_recover_invalid_key_format_returns_401(client):
-    response = client.post("/api/v1/auth/recover", params={"key": "invalid_key_without_dot"})
+    response = client.post("/api/v1/auth/recover", json={"key": "invalid_key_without_dot"})
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid key format"
+
+
+def test_recover_missing_key_returns_422(client):
+    response = client.post("/api/v1/auth/recover", json={})
+
+    assert response.status_code == 422
 
 
 def test_recover_decode_error_returns_401(client, monkeypatch):
@@ -199,7 +246,7 @@ def test_recover_decode_error_returns_401(client, monkeypatch):
 
     monkeypatch.setattr(auths_module.base64, "b64decode", broken_decode)
 
-    response = client.post("/api/v1/auth/recover", params={"key": "prefix.encoded"})
+    response = client.post("/api/v1/auth/recover", json={"key": "prefix.encoded"})
 
     assert response.status_code == 401
     assert response.json()["detail"].startswith("Decode error:")
@@ -207,7 +254,7 @@ def test_recover_decode_error_returns_401(client, monkeypatch):
 
 def test_recover_user_not_found_returns_404(client):
     encoded = base64.b64encode("ghost_user".encode("utf-8")).decode("utf-8")
-    response = client.post("/api/v1/auth/recover", params={"key": f"anyprefix.{encoded}"})
+    response = client.post("/api/v1/auth/recover", json={"key": f"anyprefix.{encoded}"})
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Key corrputed"
@@ -226,7 +273,7 @@ def test_recover_password_not_found_in_redis_returns_404(client, db_session):
     db_session.commit()
 
     encoded = base64.b64encode(user.username.encode("utf-8")).decode("utf-8")
-    response = client.post("/api/v1/auth/recover", params={"key": f"anyprefix.{encoded}"})
+    response = client.post("/api/v1/auth/recover", json={"key": f"anyprefix.{encoded}"})
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Password not found in redis or expired"
@@ -248,7 +295,7 @@ def test_recover_success_returns_key_and_password(client, db_session, fake_redis
     key = f"keyprefix.{encoded}"
     fake_redis.store[key] = "temporary_pwd"
 
-    response = client.post("/api/v1/auth/recover", params={"key": key})
+    response = client.post("/api/v1/auth/recover", json={"key": key})
 
     assert response.status_code == 200
     assert response.json() == {"key": key, "password": "temporary_pwd"}
