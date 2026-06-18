@@ -26,7 +26,6 @@ def test_signup_duplicate_username_returns_400(client, db_session):
             username="dup_user",
             name="dup",
             last_name="user",
-            phone=5500000010,
             email="dup_user@example.com",
             hashed_password=sha256_crypt.hash("password"),
         )
@@ -39,7 +38,6 @@ def test_signup_duplicate_username_returns_400(client, db_session):
             "username": "dup_user",
             "name": "new",
             "last_name": "user",
-            "phone": 5500000011,
             "email": "new_dup_user@example.com",
             "hashed_password": "password",
         },
@@ -83,7 +81,6 @@ def test_login_invalid_credentials_returns_401(client, db_session):
             username="known_user",
             name="known",
             last_name="user",
-            phone=5500000012,
             email="known_user@example.com",
             hashed_password=sha256_crypt.hash("right_password"),
         )
@@ -150,7 +147,6 @@ def test_generate_password_key_exists_returns_400(client, db_session, fake_redis
         username="recover_user",
         name="recover",
         last_name="user",
-        phone=5500000013,
         email="recover_user@example.com",
         hashed_password=sha256_crypt.hash("original_password"),
     )
@@ -172,7 +168,6 @@ def test_generate_password_success_saves_password_and_calls_email(client, db_ses
         username="mail_user",
         name="mail",
         last_name="user",
-        phone=5500000014,
         email="mail_user@example.com",
         hashed_password=sha256_crypt.hash("old_password"),
     )
@@ -210,7 +205,6 @@ def test_generate_password_email_failure_returns_500(client, db_session, monkeyp
         username="mail_fail_user",
         name="mail",
         last_name="fail",
-        phone=5500000015,
         email="mail_fail_user@example.com",
         hashed_password=sha256_crypt.hash("old_password"),
     )
@@ -265,7 +259,6 @@ def test_recover_password_not_found_in_redis_returns_404(client, db_session):
         username="recover_missing_pwd",
         name="recover",
         last_name="missing",
-        phone=5500000016,
         email="recover_missing_pwd@example.com",
         hashed_password=sha256_crypt.hash("old_password"),
     )
@@ -284,7 +277,6 @@ def test_recover_success_returns_key_and_password(client, db_session, fake_redis
         username="recover_ok",
         name="recover",
         last_name="ok",
-        phone=5500000017,
         email="recover_ok@example.com",
         hashed_password=sha256_crypt.hash("old_password"),
     )

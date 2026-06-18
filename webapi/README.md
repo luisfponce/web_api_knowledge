@@ -207,10 +207,10 @@ Check the backend root endpoint directly:
 curl http://127.0.0.1:8000/
 ```
 
-Create a user through the frontend proxy. Change `username`, `phone`, or `email` before rerunning because those fields must be unique:
+Create a user through the frontend proxy. Change `username` or `email` before rerunning because those fields must be unique:
 
 ```bash
-curl -X POST http://127.0.0.1:8080/api/v1/auth/signup -H "Content-Type: application/json" -d '{"username":"demo_user_001","name":"Demo","last_name":"User","phone":"5550000001","email":"demo001@example.com","hashed_password":"demo-password"}'
+curl -X POST http://127.0.0.1:8080/api/v1/auth/signup -H "Content-Type: application/json" -d '{"username":"demo_user_001","name":"Demo","last_name":"User","email":"demo001@example.com","hashed_password":"demo-password"}'
 ```
 
 Login and store the token without requiring `jq`:

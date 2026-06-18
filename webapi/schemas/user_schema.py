@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import List
 from pydantic import BaseModel
 from .prompt_schema import PromptRead
 
@@ -8,7 +8,6 @@ class UserRead(BaseModel):
     username: str
     name: str
     last_name: str
-    phone: Optional[int]
     email: str
     role: str
 
@@ -20,7 +19,6 @@ class UserReadWithPrompts(BaseModel):
     username: str
     name: str
     last_name: str
-    phone: Optional[int]
     email: str
     role: str
     prompts: List[PromptRead] = []
