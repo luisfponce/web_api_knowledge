@@ -16,8 +16,31 @@ def test_signup_success(client, user_payload, db_session):
 
     created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
     assert created is not None
+    assert isinstance(created.id, int)
     assert created.hashed_password != user_payload["hashed_password"]
     assert sha256_crypt.verify(user_payload["hashed_password"], created.hashed_password)
+
+
+def test_signup_rejects_client_supplied_id(client, user_payload, db_session):
+    response = client.post("/api/v1/auth/signup", json={**user_payload, "id": 8})
+
+    assert response.status_code == 422
+    created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
+    assert created is None
+
+
+def test_signup_openapi_schema_does_not_expose_id(client):
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    body_schema = response.json()["paths"]["/api/v1/auth/signup"]["post"]["requestBody"]["content"]["application/json"]["schema"]
+    ref_name = body_schema["$ref"].rsplit("/", 1)[-1]
+    user_create_schema = response.json()["components"]["schemas"][ref_name]
+    example = user_create_schema["example"]
+
+    assert "id" not in user_create_schema["properties"]
+    assert "id" not in user_create_schema.get("required", [])
+    assert "id" not in example
 
 
 def test_signup_duplicate_username_returns_400(client, db_session):
