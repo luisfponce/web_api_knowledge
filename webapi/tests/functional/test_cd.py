@@ -11,7 +11,6 @@ def test_login_and_access_private(client):
             "username": "pytest",
             "name": "Py",
             "last_name": "Tester",
-            "phone": 5511111111,
             "email": "pytest@example.com",
             "hashed_password": "pytest",
         },

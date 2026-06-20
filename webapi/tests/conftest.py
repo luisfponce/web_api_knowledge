@@ -76,7 +76,6 @@ def user_payload():
         "username": "pytest_user",
         "name": "Py",
         "last_name": "Tester",
-        "phone": 5512345678,
         "email": "pytest_user@example.com",
         "hashed_password": "pytest_password",
     }
@@ -88,7 +87,6 @@ def created_user(db_session):
         username="base_user",
         name="Base",
         last_name="User",
-        phone=5500000001,
         email="base_user@example.com",
         hashed_password="base_password",
     )

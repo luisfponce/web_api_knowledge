@@ -14,16 +14,11 @@ def test_read_users_success(client, auth_header, created_user):
     assert "hashed_password" not in response.json()[0]
 
 
-def test_read_users_with_phone_filter_success(client, auth_header, created_user):
-    response = client.get(f"/api/v1/users?phone={created_user.phone}", headers=auth_header)
+def test_read_users_not_found_returns_404(client, auth_header, created_user, db_session):
+    db_session.delete(created_user)
+    db_session.commit()
 
-    assert response.status_code == 200
-    assert len(response.json()) == 1
-    assert response.json()[0]["phone"] == created_user.phone
-
-
-def test_read_users_not_found_returns_404(client, auth_header):
-    response = client.get("/api/v1/users?phone=5599998888", headers=auth_header)
+    response = client.get("/api/v1/users", headers=auth_header)
 
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
@@ -72,7 +67,6 @@ def test_update_user_success(client, auth_header, created_user, db_session):
         "username": created_user.username,
         "name": "UPDATED",
         "last_name": "USER",
-        "phone": 5599990000,
         "email": "updated_user@example.com",
         "hashed_password": "new_password",
     }
@@ -83,7 +77,6 @@ def test_update_user_success(client, auth_header, created_user, db_session):
     body = response.json()
     assert body["name"] == "updated"
     assert body["last_name"] == "user"
-    assert body["phone"] == 5599990000
     assert body["email"] == "updated_user@example.com"
 
     updated = db_session.get(User, created_user.id)
@@ -95,7 +88,6 @@ def test_update_user_missing_returns_404(client, auth_header):
         "username": "missing",
         "name": "Missing",
         "last_name": "User",
-        "phone": 5511112222,
         "email": "missing_user@example.com",
         "hashed_password": "password",
     }
@@ -111,7 +103,6 @@ def test_update_user_duplicate_username_returns_400(client, auth_header, created
         username="taken_username",
         name="Another",
         last_name="User",
-        phone=5500000090,
         email="another_user@example.com",
         hashed_password=sha256_crypt.hash("password"),
     )
@@ -122,7 +113,6 @@ def test_update_user_duplicate_username_returns_400(client, auth_header, created
         "username": "taken_username",
         "name": "Updated",
         "last_name": "User",
-        "phone": created_user.phone,
         "email": "updated_conflict@example.com",
         "hashed_password": "new_password",
     }

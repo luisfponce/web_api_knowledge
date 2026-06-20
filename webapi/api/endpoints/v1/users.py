@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import Session, select
 from models.user import User
-from typing import Optional
 from schemas.user_schema import UserRead, UserReadWithPrompts
 from db.db_connection import get_session
 from auth.auth_service import get_current_user
@@ -11,13 +10,10 @@ from passlib.hash import sha256_crypt
 router = APIRouter()
 
 @router.get("", response_model=list[UserRead])
-def read_users(phone: Optional[int] = None, skip: int = 0, limit: int = 10,
+def read_users(skip: int = 0, limit: int = 10,
                session: Session = Depends(get_session),
                current_user: dict = Depends(get_current_user)):
     statement = select(User).offset(skip).limit(limit)
-    # If phone is provided, filter by phone number
-    if phone:
-        statement = statement.where(User.phone == phone)
     users = session.exec(statement).all()
     if not users:
         raise HTTPException(status_code=404, detail="User not found")
@@ -56,7 +52,6 @@ def update_user(user_id: int, user: User,
         raise HTTPException(status_code=404, detail="User not found")
     existing_user.name = user.name
     existing_user.last_name = user.last_name
-    existing_user.phone = user.phone
     existing_user.email = user.email
     existing_user.hashed_password = sha256_crypt.hash(user.hashed_password)
     # Ensure the username is unique

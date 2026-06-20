@@ -16,8 +16,31 @@ def test_signup_success(client, user_payload, db_session):
 
     created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
     assert created is not None
+    assert isinstance(created.id, int)
     assert created.hashed_password != user_payload["hashed_password"]
     assert sha256_crypt.verify(user_payload["hashed_password"], created.hashed_password)
+
+
+def test_signup_rejects_client_supplied_id(client, user_payload, db_session):
+    response = client.post("/api/v1/auth/signup", json={**user_payload, "id": 8})
+
+    assert response.status_code == 422
+    created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
+    assert created is None
+
+
+def test_signup_openapi_schema_does_not_expose_id(client):
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    body_schema = response.json()["paths"]["/api/v1/auth/signup"]["post"]["requestBody"]["content"]["application/json"]["schema"]
+    ref_name = body_schema["$ref"].rsplit("/", 1)[-1]
+    user_create_schema = response.json()["components"]["schemas"][ref_name]
+    example = user_create_schema["example"]
+
+    assert "id" not in user_create_schema["properties"]
+    assert "id" not in user_create_schema.get("required", [])
+    assert "id" not in example
 
 
 def test_signup_duplicate_username_returns_400(client, db_session):
@@ -26,7 +49,6 @@ def test_signup_duplicate_username_returns_400(client, db_session):
             username="dup_user",
             name="dup",
             last_name="user",
-            phone=5500000010,
             email="dup_user@example.com",
             hashed_password=sha256_crypt.hash("password"),
         )
@@ -39,7 +61,6 @@ def test_signup_duplicate_username_returns_400(client, db_session):
             "username": "dup_user",
             "name": "new",
             "last_name": "user",
-            "phone": 5500000011,
             "email": "new_dup_user@example.com",
             "hashed_password": "password",
         },
@@ -83,7 +104,6 @@ def test_login_invalid_credentials_returns_401(client, db_session):
             username="known_user",
             name="known",
             last_name="user",
-            phone=5500000012,
             email="known_user@example.com",
             hashed_password=sha256_crypt.hash("right_password"),
         )
@@ -150,7 +170,6 @@ def test_generate_password_key_exists_returns_400(client, db_session, fake_redis
         username="recover_user",
         name="recover",
         last_name="user",
-        phone=5500000013,
         email="recover_user@example.com",
         hashed_password=sha256_crypt.hash("original_password"),
     )
@@ -172,7 +191,6 @@ def test_generate_password_success_saves_password_and_calls_email(client, db_ses
         username="mail_user",
         name="mail",
         last_name="user",
-        phone=5500000014,
         email="mail_user@example.com",
         hashed_password=sha256_crypt.hash("old_password"),
     )
@@ -210,7 +228,6 @@ def test_generate_password_email_failure_returns_500(client, db_session, monkeyp
         username="mail_fail_user",
         name="mail",
         last_name="fail",
-        phone=5500000015,
         email="mail_fail_user@example.com",
         hashed_password=sha256_crypt.hash("old_password"),
     )
@@ -265,7 +282,6 @@ def test_recover_password_not_found_in_redis_returns_404(client, db_session):
         username="recover_missing_pwd",
         name="recover",
         last_name="missing",
-        phone=5500000016,
         email="recover_missing_pwd@example.com",
         hashed_password=sha256_crypt.hash("old_password"),
     )
@@ -284,7 +300,6 @@ def test_recover_success_returns_key_and_password(client, db_session, fake_redis
         username="recover_ok",
         name="recover",
         last_name="ok",
-        phone=5500000017,
         email="recover_ok@example.com",
         hashed_password=sha256_crypt.hash("old_password"),
     )

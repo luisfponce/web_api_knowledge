@@ -15,7 +15,6 @@ export type UserRecord = {
     username: string
     name: string
     last_name: string
-    phone: number | null
     email: string
     role: UserRole
 }

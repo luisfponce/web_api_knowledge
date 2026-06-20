@@ -14,7 +14,7 @@ from redis import Redis
 from db.redis_connection import get_redis
 from pydantic import BaseModel, Field
 from schemas.login_schema import LoginRequest
-from schemas.user_schema import UserRead
+from schemas.user_schema import UserCreate, UserRead
 
 router = APIRouter()
 
@@ -29,18 +29,24 @@ class RecoveryRedeemRequest(BaseModel):
 
 
 @router.post("/signup")
-def signup(user: User, session: Session = Depends(get_session)):
-    statement = select(User).where(User.username == user.username)
+def signup(payload: UserCreate, session: Session = Depends(get_session)):
+    statement = select(User).where(User.username == payload.username)
     result = session.exec(statement)
     user_exists = result.one_or_none()
     if user_exists:
         raise HTTPException(status_code=400, detail="username already taken")
-    if user.role not in {"user", "admin", "god"}:
+    if payload.role not in {"user", "admin", "god"}:
         raise HTTPException(status_code=400, detail="invalid role")
-    user.hashed_password = sha256_crypt.hash(user.hashed_password)
+    user = User(
+        username=payload.username,
+        name=payload.name,
+        last_name=payload.last_name,
+        email=payload.email,
+        hashed_password=sha256_crypt.hash(payload.hashed_password),
+        role=payload.role,
+    )
     session.add(user)
     session.commit()
-    session.refresh(user)
     return {"message": "User created successfully"}
 
 @router.post("/login")
