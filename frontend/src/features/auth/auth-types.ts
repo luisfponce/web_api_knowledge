@@ -8,6 +8,15 @@ export type LoginResponse = {
     token_type: string
 }
 
+export type RegisterInput = {
+    username: string
+    password: string
+    name: string
+    last_name: string
+    email: string
+    role: 'user'
+}
+
 export type UserRole = 'user' | 'admin' | 'god'
 
 export type UserRecord = {
@@ -18,6 +27,8 @@ export type UserRecord = {
     email: string
     role: UserRole
 }
+
+export type SignupResponse = UserRecord
 
 export type RecoveryGenerateInput = {
     username: string

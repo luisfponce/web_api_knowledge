@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../features/auth/auth-store'
 import { applyTheme, getInitialTheme, type ThemeMode } from '../../lib/utils/theme'
 import { Button } from '../ui/button'
+import { Badge } from '../ui/badge'
 
 type AppShellProps = {
     children: ReactNode
@@ -24,20 +25,21 @@ export function AppShell({ children }: AppShellProps) {
 
     return (
         <div className="page">
-            <header className="topbar">
-                <strong>Prompt Manager</strong>
+            <header className="topbar app-topbar">
+                <div>
+                    <strong>Prompt Catalog</strong>
+                    <p className="muted">Personal library for prompts that work</p>
+                </div>
                 <div className="topbar-actions">
                     <NavLink className="nav-link" to="/app/prompts">
-                        Prompts
+                        Catalog
                     </NavLink>
                     {session.role === 'admin' || session.role === 'god' ? (
                         <NavLink className="nav-link" to="/app/admin/prompts">
-                            Admin Monitor
+                            Admin
                         </NavLink>
                     ) : null}
-                    <span className="muted">
-                        {session.username} · {session.role}
-                    </span>
+                    <Badge tone="accent">{session.username} · {session.role}</Badge>
                     <Button variant="ghost" onClick={toggleTheme}>
                         {theme === 'light' ? 'Dark' : 'Light'}
                     </Button>
@@ -46,7 +48,7 @@ export function AppShell({ children }: AppShellProps) {
                     </Button>
                 </div>
             </header>
-            <main>{children}</main>
+            <main className="app-main">{children}</main>
         </div>
     )
 }

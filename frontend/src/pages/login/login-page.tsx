@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/ui/card'
 import { InlineError } from '../../components/ui/inline-error'
 import { Button } from '../../components/ui/button'
@@ -9,6 +9,7 @@ import { loginSchema } from '../../lib/validation/auth-schemas'
 
 export function LoginPage() {
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     const { login } = useAuth()
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
@@ -37,11 +38,14 @@ export function LoginPage() {
     }
 
     return (
-        <div className="centered-page">
+        <div className="centered-page auth-gradient">
             <Card className="auth-card">
                 <h1>Login</h1>
                 <p className="muted">Use your API account credentials.</p>
                 <form className="stack" onSubmit={onSubmit}>
+                    {searchParams.get('registered') ? (
+                        <div className="success-panel">Account created. Sign in with your new credentials.</div>
+                    ) : null}
                     <Input
                         label="Username"
                         value={username}
@@ -61,6 +65,9 @@ export function LoginPage() {
                     </Button>
                     <Link className="text-link" to="/recovery">
                         Forgot password?
+                    </Link>
+                    <Link className="text-link" to="/register">
+                        Need an account? Create one
                     </Link>
                 </form>
             </Card>
