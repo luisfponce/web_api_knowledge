@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Card } from '../../components/ui/card'
+import { ConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InlineError } from '../../components/ui/inline-error'
+import { PageHeader } from '../../components/ui/page-header'
 import { PromptForm } from '../../components/prompts/prompt-form'
 import { PromptList } from '../../components/prompts/prompt-list'
 import { useAuth } from '../../features/auth/auth-store'
@@ -24,6 +26,7 @@ export function PromptsPage() {
     const { session } = useAuth()
     const queryClient = useQueryClient()
     const [editingPrompt, setEditingPrompt] = useState<PromptRecord | null>(null)
+    const [promptToDelete, setPromptToDelete] = useState<PromptRecord | null>(null)
     const [error, setError] = useState<string | null>(null)
 
     const token = session.token
@@ -120,16 +123,20 @@ export function PromptsPage() {
         await createMutation.mutateAsync(value)
     }
 
-    const handleDelete = (prompt: PromptRecord) => {
-        const confirmed = window.confirm('Delete this prompt?')
-        if (!confirmed) {
-            return
-        }
-        deleteMutation.mutate(prompt)
+    const handleDelete = () => {
+        if (!promptToDelete) return
+        deleteMutation.mutate(promptToDelete, {
+            onSuccess: () => setPromptToDelete(null),
+        })
     }
 
     return (
         <section className="stack">
+            <PageHeader
+                eyebrow="Catalog"
+                title="Your prompt library"
+                description="Save the prompts that worked, then find and reuse them faster."
+            />
             <Card>
                 <h1>{editingPrompt ? 'Edit prompt' : 'Create prompt'}</h1>
                 <PromptForm
@@ -155,10 +162,19 @@ export function PromptsPage() {
                     <PromptList
                         prompts={promptsQuery.data}
                         onEdit={setEditingPrompt}
-                        onDelete={handleDelete}
+                        onDelete={setPromptToDelete}
                     />
                 ) : null}
             </Card>
+            <ConfirmDialog
+                open={Boolean(promptToDelete)}
+                title="Delete prompt?"
+                description="This removes the prompt from your catalog. This action cannot be undone."
+                confirmLabel="Delete prompt"
+                busy={deleteMutation.isPending}
+                onCancel={() => setPromptToDelete(null)}
+                onConfirm={handleDelete}
+            />
         </section>
     )
 }

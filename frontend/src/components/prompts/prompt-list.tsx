@@ -1,5 +1,6 @@
 import type { PromptRecord } from '../../features/prompts/prompts-types'
 import { Button } from '../ui/button'
+import { EmptyState } from '../ui/empty-state'
 
 type PromptListProps = {
     prompts: PromptRecord[]
@@ -9,7 +10,12 @@ type PromptListProps = {
 
 export function PromptList({ prompts, onEdit, onDelete }: PromptListProps) {
     if (!prompts.length) {
-        return <p className="muted">No prompts yet.</p>
+        return (
+            <EmptyState
+                title="No prompts yet"
+                description="Save your first proven prompt to start building your reusable catalog."
+            />
+        )
     }
 
     return (

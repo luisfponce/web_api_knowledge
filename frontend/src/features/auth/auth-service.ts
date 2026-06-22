@@ -2,10 +2,12 @@ import { apiRequest } from '../../lib/http/api-client'
 import type {
     LoginInput,
     LoginResponse,
+    RegisterInput,
     RecoveryGenerateInput,
     RecoveryGenerateResponse,
     RecoveryRedeemInput,
     RecoveryRedeemResponse,
+    SignupResponse,
     UserRecord,
     UserRole,
 } from './auth-types'
@@ -33,6 +35,13 @@ export async function loginAndResolveUserId(
         userId: currentUser.id,
         role: currentUser.role,
     }
+}
+
+export function signup(input: RegisterInput): Promise<SignupResponse> {
+    return apiRequest<SignupResponse>('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify(input),
+    })
 }
 
 export function getCurrentUser(token: string): Promise<UserRecord> {
