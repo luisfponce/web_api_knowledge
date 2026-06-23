@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/card'
 import { InlineError } from '../../components/ui/inline-error'
 import { Input } from '../../components/ui/input'
 import { signup } from '../../features/auth/auth-service'
+import { ApiError } from '../../lib/http/api-error'
 import { registerSchema } from '../../lib/validation/auth-schemas'
 
 export function RegisterPage() {
@@ -32,7 +33,7 @@ export function RegisterPage() {
             navigate('/login?registered=1', { replace: true })
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to create account'
-            setError(message.includes('400') ? 'Username or email is already registered' : message)
+            setError(err instanceof ApiError && err.status === 400 ? 'Username is already taken' : message)
         } finally {
             setLoading(false)
         }

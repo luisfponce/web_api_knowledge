@@ -12,7 +12,7 @@ def test_login_and_access_private(client):
             "name": "Py",
             "last_name": "Tester",
             "email": "pytest@example.com",
-            "hashed_password": "pytest",
+            "password": "pytest",
         },
     )
     assert signup_response.status_code in (200, 400)

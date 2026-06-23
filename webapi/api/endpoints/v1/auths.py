@@ -42,7 +42,7 @@ def signup(payload: UserCreate, session: Session = Depends(get_session)):
         name=payload.name,
         last_name=payload.last_name,
         email=payload.email,
-        hashed_password=sha256_crypt.hash(payload.hashed_password),
+        hashed_password=sha256_crypt.hash(payload.password),
         role=payload.role,
     )
     session.add(user)

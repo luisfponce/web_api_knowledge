@@ -77,7 +77,7 @@ def user_payload():
         "name": "Py",
         "last_name": "Tester",
         "email": "pytest_user@example.com",
-        "hashed_password": "pytest_password",
+        "password": "pytest_password",
     }
 
 

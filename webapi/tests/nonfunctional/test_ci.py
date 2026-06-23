@@ -22,7 +22,7 @@ def test_register_user():
         "name": "user to test",
         "last_name": "my webapp",
         "email": "pytestmyapp@testing.com",
-        "hashed_password": TEST_PSW
+        "password": TEST_PSW
     })
     assert response.status_code in (200, 400)
     if response.status_code == 400:

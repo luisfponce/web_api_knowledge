@@ -28,7 +28,9 @@ export type UserRecord = {
     role: UserRole
 }
 
-export type SignupResponse = UserRecord
+export type SignupResponse = {
+    message: string
+}
 
 export type RecoveryGenerateInput = {
     username: string
