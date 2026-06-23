@@ -1,6 +1,6 @@
 import api.endpoints.v1.prompts as prompts_module
 from auth.auth_service import crear_jwt
-from models.prompts import Prompts
+from models.prompts import PROMPT_TEXT_MAX_CHARS, Prompts
 from models.user import User
 
 
@@ -52,6 +52,36 @@ def test_create_prompt_success(client, auth_header, created_user):
     assert response.status_code == 200
     assert response.json()["user_id"] == created_user.id
     assert response.json()["model_name"] == "gpt-4.1"
+
+
+def test_create_prompt_accepts_prompt_text_longer_than_150_chars(client, auth_header, created_user):
+    prompt_text = "x" * 151
+    payload = {
+        "user_id": created_user.id,
+        "model_name": "gpt-4.1",
+        "prompt_text": prompt_text,
+        "category": "qa",
+        "rate": 5,
+    }
+
+    response = client.post("/api/v1/prompts", json=payload, headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.json()["prompt_text"] == prompt_text
+
+
+def test_create_prompt_rejects_prompt_text_above_max_chars(client, auth_header, created_user):
+    payload = {
+        "user_id": created_user.id,
+        "model_name": "gpt-4.1",
+        "prompt_text": "x" * (PROMPT_TEXT_MAX_CHARS + 1),
+        "category": "qa",
+        "rate": 5,
+    }
+
+    response = client.post("/api/v1/prompts", json=payload, headers=auth_header)
+
+    assert response.status_code == 422
 
 
 def test_create_prompt_unauthorized_returns_401(client, created_user):
