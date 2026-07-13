@@ -29,7 +29,7 @@ export function RegisterPage() {
         try {
             setLoading(true)
             setError(null)
-            await signup({ ...parsed.data, role: 'user' })
+            await signup(parsed.data)
             navigate('/login?registered=1', { replace: true })
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unable to create account'

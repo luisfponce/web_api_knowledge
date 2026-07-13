@@ -14,7 +14,6 @@ export type RegisterInput = {
     name: string
     last_name: string
     email: string
-    role: 'user'
 }
 
 export type UserRole = 'user' | 'admin' | 'god'
