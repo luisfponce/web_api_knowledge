@@ -313,6 +313,89 @@ h2 {
     gap: var(--space-4);
 }
 
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.prompt-list {
+    gap: var(--space-2);
+}
+
+.prompt-list-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+    color: inherit;
+    background: var(--surface);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color var(--transition-fast),
+        background-color var(--transition-fast),
+        box-shadow var(--transition-fast);
+}
+
+.prompt-list-item:hover,
+.prompt-list-item:focus-visible {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.prompt-list-item:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    outline-offset: 2px;
+}
+
+.prompt-list-summary {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.prompt-list-meta,
+.prompt-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.prompt-detail-dialog {
+    width: min(640px, 100%);
+}
+
+.prompt-detail-body {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.prompt-detail-field {
+    display: grid;
+    gap: var(--space-1);
+}
+
+.prompt-detail-text {
+    max-height: min(46vh, 28rem);
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
 .section-heading {
     display: flex;
     justify-content: space-between;
@@ -500,6 +583,15 @@ h2 {
 @media (max-width: 640px) {
     .list-item {
         flex-direction: column;
+    }
+
+    .prompt-list-item {
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+    }
+
+    .prompt-list-summary {
+        white-space: normal;
     }
 
     .topbar {
