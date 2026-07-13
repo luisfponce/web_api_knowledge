@@ -76,7 +76,7 @@ If Gmail SMTP is used, use an app password rather than an account password. Scop
 ## Documentation
 
 - [`frontend/README.md`](frontend/README.md): frontend local development, production build, Docker, nginx proxying, and environment notes.
-- [`webapi/README.md`](webapi/README.md): backend deployment, MariaDB operations, API checks, configuration, and troubleshooting.
+- [`webapi/README.md`](webapi/README.md): backend deployment, MariaDB operations, API checks, [`admin` and `god` user elevation](webapi/README.md#administrative-users-and-roles), configuration, and troubleshooting.
 - [`webapi/tests/README.md`](webapi/tests/README.md): backend test commands and CI/CD test mapping.
 - [`plans/dbdiagram.md`](plans/dbdiagram.md): database and ORM diagram details for dbdiagram.io.
 
