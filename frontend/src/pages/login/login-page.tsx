@@ -44,7 +44,7 @@ export function LoginPage() {
                 <p className="muted">Use your API account credentials.</p>
                 <form className="stack" onSubmit={onSubmit}>
                     {searchParams.get('registered') ? (
-                        <div className="success-panel">Account created. Sign in with your new credentials.</div>
+                        <div className="success-panel">Account created with the default user role. Sign in with your new credentials.</div>
                     ) : null}
                     <Input
                         label="Username"
