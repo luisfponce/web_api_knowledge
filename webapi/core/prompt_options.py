@@ -1,18 +1,39 @@
 MODEL_NAME_MAX_CHARS = 30
 
 CATEGORY_OPTIONS = [
-    {"value": "qa", "label": "QA"},
-    {"value": "dev", "label": "Development"},
-    {"value": "ops", "label": "Operations"},
-    {"value": "writing", "label": "Writing"},
+    {"value": "others", "label": "Others"},
+    {"value": "development", "label": "Software Development"},
+    {"value": "data_analysis", "label": "Data Analysis"},
+    {"value": "writing", "label": "Writing & Editing"},
     {"value": "research", "label": "Research"},
+    {"value": "marketing_sales", "label": "Marketing & Sales"},
+    {"value": "finance", "label": "Finance & Investing"},
+    {"value": "science_education", "label": "Science & Education"},
+    {"value": "personal_development", "label": "Personal Development"},
+    {"value": "productivity_ops", "label": "Productivity & Operations"},
 ]
 
 MODEL_OPTIONS = [
-    {"value": "gpt-4.1", "label": "GPT-4.1"},
-    {"value": "gpt-4o-mini", "label": "GPT-4o mini"},
-    {"value": "gpt-5", "label": "GPT-5"},
-    {"value": "gpt-5-mini", "label": "GPT-5 mini"},
+    {"value": "gpt", "label": "GPT"},
+    {"value": "claude", "label": "Claude"},
+    {"value": "gemini", "label": "Gemini"},
+    {"value": "deepseek", "label": "DeepSeek"},
+    {"value": "llama", "label": "Llama"},
+    {"value": "qwen", "label": "Qwen"},
+    {"value": "mistral", "label": "Mistral"},
+    {"value": "grok", "label": "Grok"},
+    {"value": "command", "label": "Command"},
+    {"value": "kimi", "label": "Kimi"},
+    {"value": "gemma", "label": "Gemma"},
+    {"value": "phi", "label": "Phi"},
+    {"value": "glm", "label": "GLM"},
+    {"value": "nova", "label": "Nova"},
+    {"value": "jamba", "label": "Jamba"},
+    {"value": "yi", "label": "Yi"},
+    {"value": "falcon", "label": "Falcon"},
+    {"value": "mixtral", "label": "Mixtral"},
+    {"value": "sonar", "label": "Sonar"},
+    {"value": "dbrx", "label": "DBRX"},
 ]
 
 MODEL_OPTION_VALUES = frozenset(option["value"] for option in MODEL_OPTIONS)
