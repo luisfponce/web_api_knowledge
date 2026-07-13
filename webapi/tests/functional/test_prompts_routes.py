@@ -2,6 +2,7 @@ import api.endpoints.v1.prompts as prompts_module
 from auth.auth_service import crear_jwt
 from models.prompts import PROMPT_TEXT_MAX_CHARS, Prompts
 from models.user import User
+from sqlmodel import select
 
 
 def auth_headers_for(user: User) -> dict[str, str]:
@@ -82,6 +83,22 @@ def test_create_prompt_rejects_prompt_text_above_max_chars(client, auth_header, 
     response = client.post("/api/v1/prompts", json=payload, headers=auth_header)
 
     assert response.status_code == 422
+
+
+def test_create_prompt_rejects_unknown_model_name(client, auth_header, created_user, db_session):
+    payload = {
+        "user_id": created_user.id,
+        "model_name": "unknown-model",
+        "prompt_text": "Unknown model should not persist",
+        "category": "qa",
+        "rate": 5,
+    }
+
+    response = client.post("/api/v1/prompts", json=payload, headers=auth_header)
+
+    assert response.status_code == 422
+    prompts = db_session.exec(select(Prompts)).all()
+    assert prompts == []
 
 
 def test_create_prompt_unauthorized_returns_401(client, created_user):
@@ -263,6 +280,23 @@ def test_update_prompt_success(client, auth_header, created_prompt, created_user
     assert response.status_code == 200
     assert response.json()["model_name"] == "gpt-4o-mini"
     assert response.json()["prompt_text"] == "Updated prompt"
+
+
+def test_update_prompt_rejects_unknown_model_name(client, auth_header, created_prompt, created_user, db_session):
+    payload = {
+        "user_id": created_user.id,
+        "model_name": "unknown-model",
+        "prompt_text": "Unknown model should not update",
+        "category": "dev",
+        "rate": 3,
+    }
+
+    response = client.put(f"/api/v1/prompts/{created_prompt.id}", json=payload, headers=auth_header)
+
+    assert response.status_code == 422
+    db_session.refresh(created_prompt)
+    assert created_prompt.model_name == "gpt-4.1"
+    assert created_prompt.prompt_text == "existing prompt"
 
 
 def test_update_prompt_missing_returns_404(client, auth_header, created_user):

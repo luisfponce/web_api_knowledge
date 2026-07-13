@@ -1,4 +1,5 @@
 from api.endpoints.v1.options import CATEGORY_OPTIONS, MODEL_OPTIONS
+from core.prompt_options import MODEL_OPTION_VALUES
 
 
 def test_read_category_options(client, auth_header):
@@ -53,3 +54,4 @@ def test_prompt_options_align_with_known_backend_values(client, auth_header):
     assert {item["value"] for item in model_response.json()["items"]} == {
         item["value"] for item in MODEL_OPTIONS
     }
+    assert {item["value"] for item in model_response.json()["items"]} == MODEL_OPTION_VALUES
