@@ -5,9 +5,11 @@ import os
 from dataclasses import dataclass
 
 from passlib.hash import sha256_crypt
-from sqlmodel import Session, select
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import OperationalError
+from sqlmodel import SQLModel, Session, create_engine, select
 
-from db.db_connection import engine
+from core import config
 from models.user import User
 
 
@@ -102,7 +104,65 @@ def build_parser() -> argparse.ArgumentParser:
         "--password-env",
         help="Name of an environment variable containing the password; prompts securely when omitted",
     )
+    bootstrap.add_argument(
+        "--db-url",
+        help="Database URL override. Defaults to DB_URL from the environment or app config.",
+    )
     return parser
+
+
+def create_cli_engine(db_url: str | None = None):
+    return create_engine(db_url or config.DB_URL, echo=True)
+
+
+def _compose_host_fallback_db_url(db_url: str | None = None) -> str | None:
+    configured_url = make_url(db_url or config.DB_URL)
+    if configured_url.host != "mariadb":
+        return None
+
+    port_text = os.getenv("MARIADB_HOST_PORT") or str(configured_url.port or 3306)
+    try:
+        port = int(port_text)
+    except ValueError as exc:
+        raise SuperAdminBootstrapError("MARIADB_HOST_PORT must be an integer") from exc
+
+    return configured_url.set(host="127.0.0.1", port=port).render_as_string(
+        hide_password=False
+    )
+
+
+def _database_error_message(db_url: str | None = None) -> str:
+    configured_url = make_url(db_url or config.DB_URL)
+    message = (
+        "error: unable to connect to the configured database. "
+        "Verify DB_URL is reachable from where this command is running."
+    )
+
+    if configured_url.host == "mariadb":
+        message += (
+            " The hostname 'mariadb' only resolves inside the Docker Compose "
+            "network. Run this command with `docker compose exec backend ...` "
+            "or use a host-reachable DB URL such as "
+            "`mariadb+mariadbconnector://USER:PASSWORD@127.0.0.1:3306/DB_NAME`."
+        )
+
+    return message
+
+
+def _run_bootstrap_command(args, password: str, db_url: str | None = None) -> int:
+    engine = create_cli_engine(db_url)
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        result = bootstrap_super_admin(
+            session,
+            username=args.username,
+            email=args.email,
+            password=password,
+            name=args.name,
+            last_name=args.last_name,
+        )
+    print(f"super admin {result.action}: {result.user.username}")
+    return 0
 
 
 def main() -> int:
@@ -112,19 +172,29 @@ def main() -> int:
     try:
         if args.command == "bootstrap-super-admin":
             password = _resolve_password(args.password_env)
-            with Session(engine) as session:
-                result = bootstrap_super_admin(
-                    session,
-                    username=args.username,
-                    email=args.email,
-                    password=password,
-                    name=args.name,
-                    last_name=args.last_name,
+            try:
+                return _run_bootstrap_command(args, password, args.db_url)
+            except OperationalError as exc:
+                fallback_url = _compose_host_fallback_db_url(args.db_url)
+                if not fallback_url:
+                    raise
+
+                fallback_port = make_url(fallback_url).port or 3306
+                print(
+                    "warning: could not connect to Compose hostname 'mariadb'; "
+                    f"retrying through 127.0.0.1:{fallback_port}."
                 )
-            print(f"super admin {result.action}: {result.user.username}")
-            return 0
+                try:
+                    return _run_bootstrap_command(args, password, fallback_url)
+                except OperationalError:
+                    LOGGER.debug("database fallback connection failed", exc_info=True)
+                    raise
     except SuperAdminBootstrapError as exc:
         print(f"error: {exc}")
+        return 1
+    except OperationalError as exc:
+        print(_database_error_message(args.db_url if hasattr(args, "db_url") else None))
+        LOGGER.debug("database connection failed", exc_info=True)
         return 1
 
     return 1

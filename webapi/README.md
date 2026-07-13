@@ -251,13 +251,14 @@ Public registration behavior:
 - Sending `role` to signup is rejected by backend validation instead of creating an elevated account.
 - There is intentionally no public HTTP endpoint or frontend form for granting `admin` or `god` privileges.
 
-Bootstrap the first `god` user with the backend CLI from `webapi/`:
+Bootstrap the first `god` user with the backend CLI from `webapi/`. When running this command directly from your host shell, the database must be reachable through the published MariaDB host port. If you pass a Compose URL that uses host `mariadb`, the CLI retries through `127.0.0.1:${MARIADB_HOST_PORT:-3306}` because `mariadb` only resolves inside Compose containers:
 
 ```bash
 cd webapi
 python -m admin_cli bootstrap-super-admin \
   --username root_admin \
-  --email root-admin@example.com
+  --email root-admin@example.com \
+  --db-url "mariadb+mariadbconnector://webapi_user:replace_with_local_database_password@mariadb:3306/crud_data"
 ```
 
 When `--password-env` is omitted, the command prompts for the password securely. For non-interactive automation, pass the name of an environment variable containing the password, source that value from a trusted secret store, and remove it immediately afterward:
@@ -268,7 +269,8 @@ export BOOTSTRAP_GOD_PASSWORD='replace-with-a-local-secret'
 python -m admin_cli bootstrap-super-admin \
   --username root_admin \
   --email root-admin@example.com \
-  --password-env BOOTSTRAP_GOD_PASSWORD
+  --password-env BOOTSTRAP_GOD_PASSWORD \
+  --db-url "mariadb+mariadbconnector://webapi_user:replace_with_local_database_password@127.0.0.1:3306/crud_data"
 unset BOOTSTRAP_GOD_PASSWORD
 ```
 

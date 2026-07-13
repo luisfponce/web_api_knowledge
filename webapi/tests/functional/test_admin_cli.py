@@ -2,7 +2,11 @@ import pytest
 from passlib.hash import sha256_crypt
 from sqlmodel import select
 
-from admin_cli import SuperAdminBootstrapError, bootstrap_super_admin
+from admin_cli import (
+    SuperAdminBootstrapError,
+    _compose_host_fallback_db_url,
+    bootstrap_super_admin,
+)
 from models.user import User
 
 
@@ -88,3 +92,21 @@ def test_bootstrap_super_admin_refuses_when_another_god_exists(db_session):
 
     second = db_session.exec(select(User).where(User.username == "second_root")).first()
     assert second is None
+
+
+def test_compose_host_fallback_rewrites_mariadb_to_localhost(monkeypatch):
+    monkeypatch.setenv("MARIADB_HOST_PORT", "3307")
+
+    fallback = _compose_host_fallback_db_url(
+        "mariadb+mariadbconnector://webapi_user:devepass@mariadb:3306/crud_data"
+    )
+
+    assert fallback == "mariadb+mariadbconnector://webapi_user:devepass@127.0.0.1:3307/crud_data"
+
+
+def test_compose_host_fallback_ignores_non_compose_hosts():
+    fallback = _compose_host_fallback_db_url(
+        "mariadb+mariadbconnector://webapi_user:devepass@127.0.0.1:3306/crud_data"
+    )
+
+    assert fallback is None
