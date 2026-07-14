@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PromptForm } from '../../components/prompts/prompt-form'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
+import { ConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InlineError } from '../../components/ui/inline-error'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
@@ -28,11 +30,13 @@ const ratingOptions = [1, 2, 3, 4, 5].map((rating) => ({
 }))
 
 export function AdminPromptsPage() {
+    const { t } = useTranslation()
     const { session } = useAuth()
     const queryClient = useQueryClient()
     const [filters, setFilters] = useState<PromptFilters>({})
     const [userFilter, setUserFilter] = useState('')
     const [editingPrompt, setEditingPrompt] = useState<PromptRecord | null>(null)
+    const [promptToDelete, setPromptToDelete] = useState<PromptRecord | null>(null)
     const [error, setError] = useState<string | null>(null)
 
     const token = session.token
@@ -70,7 +74,7 @@ export function AdminPromptsPage() {
     const updateMutation = useMutation({
         mutationFn: async (value: PromptInput) => {
             if (!token || !editingPrompt) {
-                throw new Error('Session or selected prompt is not available')
+                throw new Error(t('admin.errors.selectedUnavailable'))
             }
             return updatePrompt(token, editingPrompt.id, editingPrompt.user_id, value)
         },
@@ -80,14 +84,14 @@ export function AdminPromptsPage() {
             setError(null)
         },
         onError: (err) => {
-            setError(err instanceof Error ? err.message : 'Unable to update prompt')
+            setError(err instanceof Error ? err.message : t('admin.errors.update'))
         },
     })
 
     const deleteMutation = useMutation({
         mutationFn: async (prompt: PromptRecord) => {
             if (!token) {
-                throw new Error('Session is not available')
+                throw new Error(t('admin.errors.sessionUnavailable'))
             }
             return deletePrompt(token, prompt.id)
         },
@@ -96,7 +100,7 @@ export function AdminPromptsPage() {
             setError(null)
         },
         onError: (err) => {
-            setError(err instanceof Error ? err.message : 'Unable to delete prompt')
+            setError(err instanceof Error ? err.message : t('admin.errors.delete'))
         },
     })
 
@@ -108,10 +112,11 @@ export function AdminPromptsPage() {
         }))
     }
 
-    const handleDelete = (prompt: PromptRecord) => {
-        const confirmed = window.confirm('Delete this prompt?')
-        if (!confirmed) return
-        deleteMutation.mutate(prompt)
+    const handleDelete = () => {
+        if (!promptToDelete) return
+        deleteMutation.mutate(promptToDelete, {
+            onSuccess: () => setPromptToDelete(null),
+        })
     }
 
     return (
@@ -119,9 +124,9 @@ export function AdminPromptsPage() {
             <Card className="stack">
                 <div className="section-heading">
                     <div>
-                        <h1>Admin Monitor</h1>
+                        <h1>{t('admin.title')}</h1>
                         <p className="muted">
-                            {promptsQuery.data?.length ?? 0} prompts visible to {session.role}.
+                            {t('admin.visibleCount', { count: promptsQuery.data?.length ?? 0, role: session.role })}
                         </p>
                     </div>
                     <span className="badge">{session.role}</span>
@@ -129,7 +134,7 @@ export function AdminPromptsPage() {
 
                 <div className="filter-grid">
                     <Input
-                        label="User ID"
+                        label={t('admin.filters.userId')}
                         type="number"
                         min="1"
                         value={userFilter}
@@ -137,8 +142,9 @@ export function AdminPromptsPage() {
                         onBlur={applyUserFilter}
                     />
                     <Select
-                        label="Model"
+                        label={t('admin.filters.model')}
                         options={modelsQuery.data?.items ?? []}
+                        placeholder={t('common.selectOption')}
                         value={filters.model_name ?? ''}
                         onChange={(event) =>
                             setFilters((prev) => ({
@@ -148,8 +154,9 @@ export function AdminPromptsPage() {
                         }
                     />
                     <Select
-                        label="Category"
+                        label={t('admin.filters.category')}
                         options={categoriesQuery.data?.items ?? []}
+                        placeholder={t('common.selectOption')}
                         value={filters.category ?? ''}
                         onChange={(event) =>
                             setFilters((prev) => ({
@@ -159,8 +166,9 @@ export function AdminPromptsPage() {
                         }
                     />
                     <Select
-                        label="Rating"
+                        label={t('admin.filters.rating')}
                         options={ratingOptions}
+                        placeholder={t('common.selectOption')}
                         value={filters.rate ? String(filters.rate) : ''}
                         onChange={(event) =>
                             setFilters((prev) => ({
@@ -178,13 +186,13 @@ export function AdminPromptsPage() {
                         setUserFilter('')
                     }}
                 >
-                    Clear filters
+                    {t('admin.filters.clear')}
                 </Button>
             </Card>
 
             {editingPrompt && isGod ? (
                 <Card>
-                    <h2>Edit prompt as god</h2>
+                    <h2>{t('admin.editTitle')}</h2>
                     <PromptForm
                         key={editingPrompt.id}
                         initialValue={editingPrompt}
@@ -201,15 +209,15 @@ export function AdminPromptsPage() {
             ) : null}
 
             <Card>
-                <h2>All prompts</h2>
-                {promptsQuery.isLoading ? <p className="muted">Loading...</p> : null}
+                <h2>{t('admin.allPrompts')}</h2>
+                {promptsQuery.isLoading ? <p className="muted">{t('common.loading')}</p> : null}
                 {error || promptsQuery.error ? (
                     <InlineError
                         message={
                             error ??
                             (promptsQuery.error instanceof Error
                                 ? promptsQuery.error.message
-                                : 'Unable to load prompts')
+                                : t('admin.unableToLoad'))
                         }
                     />
                 ) : null}
@@ -220,24 +228,34 @@ export function AdminPromptsPage() {
                                 <h3>{prompt.model_name}</h3>
                                 <p>{prompt.prompt_text}</p>
                                 <p className="muted">
-                                    User {prompt.user_id} · {prompt.category} · Rating {prompt.rate}/5
+                                    {t('admin.promptMeta', { userId: prompt.user_id, category: prompt.category, rating: prompt.rate })}
                                 </p>
                             </div>
                             {isGod ? (
                                 <div className="row gap-sm">
                                     <Button variant="ghost" onClick={() => setEditingPrompt(prompt)}>
-                                        Edit
+                                        {t('common.edit')}
                                     </Button>
-                                    <Button variant="danger" onClick={() => handleDelete(prompt)}>
-                                        Delete
+                                    <Button variant="danger" onClick={() => setPromptToDelete(prompt)}>
+                                        {t('common.delete')}
                                     </Button>
                                 </div>
                             ) : null}
                         </article>
                     ))}
                 </div>
-                {promptsQuery.data?.length === 0 ? <p className="muted">No prompts found.</p> : null}
+                {promptsQuery.data?.length === 0 ? <p className="muted">{t('admin.noPrompts')}</p> : null}
             </Card>
+            <ConfirmDialog
+                open={Boolean(promptToDelete)}
+                title={t('admin.deleteTitle')}
+                description={t('admin.deleteDescription')}
+                confirmLabel={t('admin.deleteConfirm')}
+                cancelLabel={t('common.cancel')}
+                busy={deleteMutation.isPending}
+                onCancel={() => setPromptToDelete(null)}
+                onConfirm={handleDelete}
+            />
         </section>
     )
 }
