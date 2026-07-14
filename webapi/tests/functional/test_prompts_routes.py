@@ -1,8 +1,13 @@
 import api.endpoints.v1.prompts as prompts_module
 from auth.auth_service import crear_jwt
+from core.prompt_options import MODEL_OPTIONS
 from models.prompts import PROMPT_TEXT_MAX_CHARS, Prompts
 from models.user import User
 from sqlmodel import select
+
+
+VALID_MODEL_NAME = MODEL_OPTIONS[0]["value"]
+ALTERNATE_MODEL_NAME = MODEL_OPTIONS[1]["value"]
 
 
 def auth_headers_for(user: User) -> dict[str, str]:
@@ -25,7 +30,13 @@ def create_user(db_session, username: str, role: str = "user") -> User:
     return user
 
 
-def create_prompt(db_session, user_id: int, category: str = "qa", model_name: str = "gpt-4.1", rate: int = 5) -> Prompts:
+def create_prompt(
+    db_session,
+    user_id: int,
+    category: str = "qa",
+    model_name: str = VALID_MODEL_NAME,
+    rate: int = 5,
+) -> Prompts:
     prompt = Prompts(
         user_id=user_id,
         model_name=model_name,
@@ -42,7 +53,7 @@ def create_prompt(db_session, user_id: int, category: str = "qa", model_name: st
 def test_create_prompt_success(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "Generate answer",
         "category": "qa",
         "rate": 5,
@@ -52,14 +63,14 @@ def test_create_prompt_success(client, auth_header, created_user):
 
     assert response.status_code == 200
     assert response.json()["user_id"] == created_user.id
-    assert response.json()["model_name"] == "gpt-4.1"
+    assert response.json()["model_name"] == VALID_MODEL_NAME
 
 
 def test_create_prompt_accepts_prompt_text_longer_than_150_chars(client, auth_header, created_user):
     prompt_text = "x" * 151
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": prompt_text,
         "category": "qa",
         "rate": 5,
@@ -74,7 +85,7 @@ def test_create_prompt_accepts_prompt_text_longer_than_150_chars(client, auth_he
 def test_create_prompt_rejects_prompt_text_above_max_chars(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "x" * (PROMPT_TEXT_MAX_CHARS + 1),
         "category": "qa",
         "rate": 5,
@@ -104,7 +115,7 @@ def test_create_prompt_rejects_unknown_model_name(client, auth_header, created_u
 def test_create_prompt_unauthorized_returns_401(client, created_user):
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "Generate answer",
         "category": "qa",
         "rate": 5,
@@ -123,7 +134,7 @@ def test_create_prompt_unauthorized_returns_401(client, created_user):
 def test_create_prompt_user_not_found_returns_404(client, auth_header):
     payload = {
         "user_id": 9999,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "Generate answer",
         "category": "qa",
         "rate": 5,
@@ -139,7 +150,7 @@ def test_regular_user_cannot_create_prompt_for_another_user(client, auth_header,
     other_user = create_user(db_session, "create_other_user")
     payload = {
         "user_id": other_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "not allowed",
         "category": "qa",
         "rate": 5,
@@ -163,7 +174,7 @@ def test_create_prompt_send_email_true_calls_email(client, auth_header, created_
 
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "Notify me",
         "category": "qa",
         "rate": 3,
@@ -184,7 +195,7 @@ def test_create_prompt_send_email_exception_still_success(client, auth_header, c
 
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "Ignore email failure",
         "category": "ops",
         "rate": 1,
@@ -222,12 +233,17 @@ def test_read_prompts_unauthorized_returns_401(client):
 def test_admin_can_filter_prompts(client, db_session, created_prompt):
     owner = db_session.get(User, created_prompt.user_id)
     admin = create_user(db_session, "filter_admin", role="admin")
-    create_prompt(db_session, owner.id, category="dev", model_name="gpt-4o-mini", rate=3)
-    create_prompt(db_session, admin.id, category="qa", model_name="gpt-4.1", rate=5)
+    create_prompt(db_session, owner.id, category="dev", model_name=ALTERNATE_MODEL_NAME, rate=3)
+    create_prompt(db_session, admin.id, category="qa", model_name=VALID_MODEL_NAME, rate=5)
 
     response = client.get(
         "/api/v1/prompts",
-        params={"user_id": owner.id, "category": "dev", "model_name": "gpt-4o-mini", "rate": 3},
+        params={
+            "user_id": owner.id,
+            "category": "dev",
+            "model_name": ALTERNATE_MODEL_NAME,
+            "rate": 3,
+        },
         headers=auth_headers_for(admin),
     )
 
@@ -235,7 +251,7 @@ def test_admin_can_filter_prompts(client, db_session, created_prompt):
     assert len(response.json()) == 1
     assert response.json()[0]["user_id"] == owner.id
     assert response.json()[0]["category"] == "dev"
-    assert response.json()[0]["model_name"] == "gpt-4o-mini"
+    assert response.json()[0]["model_name"] == ALTERNATE_MODEL_NAME
     assert response.json()[0]["rate"] == 3
 
 
@@ -269,7 +285,7 @@ def test_get_prompt_missing_returns_404(client, auth_header):
 def test_update_prompt_success(client, auth_header, created_prompt, created_user):
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4o-mini",
+        "model_name": ALTERNATE_MODEL_NAME,
         "prompt_text": "Updated prompt",
         "category": "dev",
         "rate": 3,
@@ -278,7 +294,7 @@ def test_update_prompt_success(client, auth_header, created_prompt, created_user
     response = client.put(f"/api/v1/prompts/{created_prompt.id}", json=payload, headers=auth_header)
 
     assert response.status_code == 200
-    assert response.json()["model_name"] == "gpt-4o-mini"
+    assert response.json()["model_name"] == ALTERNATE_MODEL_NAME
     assert response.json()["prompt_text"] == "Updated prompt"
 
 
@@ -295,14 +311,14 @@ def test_update_prompt_rejects_unknown_model_name(client, auth_header, created_p
 
     assert response.status_code == 422
     db_session.refresh(created_prompt)
-    assert created_prompt.model_name == "gpt-4.1"
+    assert created_prompt.model_name == VALID_MODEL_NAME
     assert created_prompt.prompt_text == "existing prompt"
 
 
 def test_update_prompt_missing_returns_404(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "Updated prompt",
         "category": "qa",
         "rate": 5,
@@ -317,7 +333,7 @@ def test_update_prompt_missing_returns_404(client, auth_header, created_user):
 def test_update_prompt_user_not_found_returns_404(client, auth_header, created_prompt):
     payload = {
         "user_id": 9999,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "Updated prompt",
         "category": "qa",
         "rate": 5,
@@ -333,7 +349,7 @@ def test_god_can_update_another_users_prompt(client, db_session, created_prompt)
     god = create_user(db_session, "update_god", role="god")
     payload = {
         "user_id": created_prompt.user_id,
-        "model_name": "gpt-5",
+        "model_name": ALTERNATE_MODEL_NAME,
         "prompt_text": "god update",
         "category": "research",
         "rate": 4,
@@ -346,14 +362,14 @@ def test_god_can_update_another_users_prompt(client, db_session, created_prompt)
     )
 
     assert response.status_code == 200
-    assert response.json()["model_name"] == "gpt-5"
+    assert response.json()["model_name"] == ALTERNATE_MODEL_NAME
     assert response.json()["prompt_text"] == "god update"
 
 
 def test_prompt_rating_validation_rejects_out_of_range_values(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "bad rating",
         "category": "qa",
         "rate": 6,
@@ -367,7 +383,7 @@ def test_prompt_rating_validation_rejects_out_of_range_values(client, auth_heade
 def test_prompt_rating_validation_rejects_non_integer_values(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "bad rating",
         "category": "qa",
         "rate": 3.5,
@@ -424,7 +440,7 @@ def test_regular_user_cannot_read_another_users_prompt(client, auth_header, db_s
     db_session.refresh(other_user)
     prompt = Prompts(
         user_id=other_user.id,
-        model_name="gpt-4.1",
+        model_name=VALID_MODEL_NAME,
         prompt_text="private prompt",
         category="qa",
         rate=4,
@@ -461,7 +477,7 @@ def test_admin_can_read_all_prompts_but_cannot_update(client, db_session, create
         f"/api/v1/prompts/{created_prompt.id}",
         json={
             "user_id": created_prompt.user_id,
-            "model_name": "gpt-4o-mini",
+            "model_name": ALTERNATE_MODEL_NAME,
             "prompt_text": "admin update",
             "category": "dev",
             "rate": 3,

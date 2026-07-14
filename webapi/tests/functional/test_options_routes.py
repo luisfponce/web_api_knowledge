@@ -1,19 +1,20 @@
-from api.endpoints.v1.options import CATEGORY_OPTIONS, MODEL_OPTIONS
-from core.prompt_options import MODEL_OPTION_VALUES
+from core.prompt_options import CATEGORY_OPTIONS, MODEL_OPTION_VALUES, MODEL_OPTIONS
 
 
 def test_read_category_options(client, auth_header):
     response = client.get("/api/v1/options/categories", headers=auth_header)
 
     assert response.status_code == 200
-    assert response.json()["items"][0] == {"value": "qa", "label": "QA"}
+    assert response.json()["items"]
+    assert response.json()["items"][0] == CATEGORY_OPTIONS[0]
 
 
 def test_read_model_options(client, auth_header):
     response = client.get("/api/v1/options/models", headers=auth_header)
 
     assert response.status_code == 200
-    assert response.json()["items"][0] == {"value": "gpt-4.1", "label": "GPT-4.1"}
+    assert response.json()["items"]
+    assert response.json()["items"][0] == MODEL_OPTIONS[0]
 
 
 def test_read_category_options_unauthorized(client):
