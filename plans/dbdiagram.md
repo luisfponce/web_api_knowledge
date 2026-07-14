@@ -36,7 +36,7 @@ Table prompts {
   id int [pk, increment]
   user_id int [not null, ref: > user.id]
   model_name varchar(30) [not null]
-  prompt_text varchar(150) [not null]
+  prompt_text longtext [not null]
   category varchar(30) [not null]
   rate varchar(30) [not null]
 

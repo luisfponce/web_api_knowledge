@@ -12,8 +12,7 @@ class UserCreate(BaseModel):
                 "name": "user",
                 "last_name": "testing",
                 "email": "user@example.com",
-                "hashed_password": "usertest",
-                "role": "user",
+                "password": "usertest",
             }
         },
     )
@@ -22,8 +21,7 @@ class UserCreate(BaseModel):
     name: str = Field(max_length=100)
     last_name: str = Field(max_length=100)
     email: EmailStr = Field(max_length=100)
-    hashed_password: str = Field(max_length=255)
-    role: str = "user"
+    password: str = Field(max_length=255)
 
 
 class UserRead(BaseModel):

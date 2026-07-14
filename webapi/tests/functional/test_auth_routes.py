@@ -17,8 +17,9 @@ def test_signup_success(client, user_payload, db_session):
     created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
     assert created is not None
     assert isinstance(created.id, int)
-    assert created.hashed_password != user_payload["hashed_password"]
-    assert sha256_crypt.verify(user_payload["hashed_password"], created.hashed_password)
+    assert created.role == "user"
+    assert created.hashed_password != user_payload["password"]
+    assert sha256_crypt.verify(user_payload["password"], created.hashed_password)
 
 
 def test_signup_rejects_client_supplied_id(client, user_payload, db_session):
@@ -29,7 +30,16 @@ def test_signup_rejects_client_supplied_id(client, user_payload, db_session):
     assert created is None
 
 
-def test_signup_openapi_schema_does_not_expose_id(client):
+def test_signup_rejects_client_supplied_hashed_password(client, user_payload, db_session):
+    payload = {**user_payload, "hashed_password": user_payload["password"]}
+    response = client.post("/api/v1/auth/signup", json=payload)
+
+    assert response.status_code == 422
+    created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
+    assert created is None
+
+
+def test_signup_openapi_schema_does_not_expose_storage_fields(client):
     response = client.get("/openapi.json")
 
     assert response.status_code == 200
@@ -41,6 +51,15 @@ def test_signup_openapi_schema_does_not_expose_id(client):
     assert "id" not in user_create_schema["properties"]
     assert "id" not in user_create_schema.get("required", [])
     assert "id" not in example
+    assert "hashed_password" not in user_create_schema["properties"]
+    assert "hashed_password" not in user_create_schema.get("required", [])
+    assert "hashed_password" not in example
+    assert "password" in user_create_schema["properties"]
+    assert "password" in user_create_schema.get("required", [])
+    assert "password" in example
+    assert "role" not in user_create_schema["properties"]
+    assert "role" not in user_create_schema.get("required", [])
+    assert "role" not in example
 
 
 def test_signup_duplicate_username_returns_400(client, db_session):
@@ -62,7 +81,7 @@ def test_signup_duplicate_username_returns_400(client, db_session):
             "name": "new",
             "last_name": "user",
             "email": "new_dup_user@example.com",
-            "hashed_password": "password",
+            "password": "password",
         },
     )
 
@@ -70,14 +89,15 @@ def test_signup_duplicate_username_returns_400(client, db_session):
     assert response.json()["detail"] == "username already taken"
 
 
-def test_signup_invalid_role_returns_400(client, user_payload):
+def test_signup_rejects_client_supplied_role(client, user_payload, db_session):
     response = client.post(
         "/api/v1/auth/signup",
-        json={**user_payload, "role": "superuser"},
+        json={**user_payload, "role": "god"},
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "invalid role"
+    assert response.status_code == 422
+    created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
+    assert created is None
 
 
 def test_login_success_returns_token(client, user_payload):
@@ -85,7 +105,7 @@ def test_login_success_returns_token(client, user_payload):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": user_payload["username"], "password": user_payload["hashed_password"]},
+        json={"username": user_payload["username"], "password": user_payload["password"]},
     )
 
     assert response.status_code == 200

@@ -207,10 +207,10 @@ Check the backend root endpoint directly:
 curl http://127.0.0.1:8000/
 ```
 
-Create a user through the frontend proxy. Change `username` or `email` before rerunning because those fields must be unique:
+Create a user through the frontend proxy. Change `username` or `email` before rerunning because those fields must be unique. The signup payload intentionally uses `password` and omits `role`; public registration always creates a default `user` account:
 
 ```bash
-curl -X POST http://127.0.0.1:8080/api/v1/auth/signup -H "Content-Type: application/json" -d '{"username":"demo_user_001","name":"Demo","last_name":"User","email":"demo001@example.com","hashed_password":"demo-password"}'
+curl -X POST http://127.0.0.1:8080/api/v1/auth/signup -H "Content-Type: application/json" -d '{"username":"demo_user_001","name":"Demo","last_name":"User","email":"demo001@example.com","password":"demo-password"}'
 ```
 
 Login and store the token without requiring `jq`:
@@ -232,6 +232,121 @@ curl http://127.0.0.1:8080/api/v1/prompts -H "Authorization: Bearer $TOKEN"
 ```
 
 For direct backend checks, replace `http://127.0.0.1:8080/api/v1` with `http://127.0.0.1:8000/api/v1` in the same API commands.
+
+## Administrative Users And Roles
+
+The current system stores authorization level in the `role` column on the `user` table. Role checks are enforced by the backend; the frontend must not be treated as an authorization boundary.
+
+Supported roles:
+
+- `user`: default role for every account created through the frontend registration UI or `/api/v1/auth/signup`.
+- `admin`: elevated administrative role used by prompt routes for broader read access.
+- `god`: highest privilege role used for cross-user prompt creation, update, delete, and full administrative access.
+
+Public registration behavior:
+
+- Users created through the frontend registration UI are always assigned `user`.
+- Users created through `/api/v1/auth/signup` are always assigned `user` server-side.
+- Signup requests must not include `role`, `id`, or `hashed_password`.
+- Sending `role` to signup is rejected by backend validation instead of creating an elevated account.
+- There is intentionally no public HTTP endpoint or frontend form for granting `admin` or `god` privileges.
+
+Bootstrap the first `god` user with the backend CLI from `webapi/`. When running this command directly from your host shell, the database must be reachable through the published MariaDB host port. If you pass a Compose URL that uses host `mariadb`, the CLI retries through `127.0.0.1:${MARIADB_HOST_PORT:-3306}` because `mariadb` only resolves inside Compose containers:
+
+```bash
+cd webapi
+python -m admin_cli bootstrap-super-admin \
+  --username root_admin \
+  --email root-admin@example.com \
+  --db-url "mariadb+mariadbconnector://webapi_user:replace_with_local_database_password@mariadb:3306/crud_data"
+```
+
+When `--password-env` is omitted, the command prompts for the password securely. For non-interactive automation, pass the name of an environment variable containing the password, source that value from a trusted secret store, and remove it immediately afterward:
+
+```bash
+cd webapi
+export BOOTSTRAP_GOD_PASSWORD='replace-with-a-local-secret'
+python -m admin_cli bootstrap-super-admin \
+  --username root_admin \
+  --email root-admin@example.com \
+  --password-env BOOTSTRAP_GOD_PASSWORD \
+  --db-url "mariadb+mariadbconnector://webapi_user:replace_with_local_database_password@127.0.0.1:3306/crud_data"
+unset BOOTSTRAP_GOD_PASSWORD
+```
+
+Run the same bootstrap command inside the Compose backend container from the repository root:
+
+```bash
+docker compose exec backend python -m admin_cli bootstrap-super-admin \
+  --username root_admin \
+  --email root-admin@example.com
+```
+
+Use `docker-compose exec backend ...` if your environment only has the legacy Compose command.
+
+Expected CLI outcomes:
+
+- `super admin created: root_admin`: a new `god` user was created.
+- `super admin promoted: root_admin`: an existing ordinary user was promoted because no `god` user existed yet.
+- `super admin already_exists: root_admin`: that same `god` user already exists and credentials were not reset.
+- `error: super admin already exists`: a different `god` user already exists; use controlled manual elevation only if an operator intentionally wants another `god` user.
+
+Manual elevation to `admin` or `god` should be performed only from a trusted operational environment. First, create the target account through the frontend UI or signup endpoint; it will start as `user`.
+
+Open a MariaDB shell in the Compose database service:
+
+```bash
+docker compose exec mariadb sh -c 'MYSQL_PWD="$MARIADB_PASSWORD" mariadb "$MARIADB_DATABASE" -u "$MARIADB_USER"'
+```
+
+Inspect the target account before changing it:
+
+```sql
+SELECT id, username, email, role FROM `user` WHERE username = 'target_username';
+```
+
+Promote the account to `admin`:
+
+```sql
+UPDATE `user` SET role = 'admin' WHERE username = 'target_username';
+```
+
+Promote the account to `god` only when intentionally granting the highest privilege level:
+
+```sql
+UPDATE `user` SET role = 'god' WHERE username = 'target_username';
+```
+
+Verify the final role:
+
+```sql
+SELECT id, username, email, role FROM `user` WHERE username = 'target_username';
+```
+
+After manual elevation, the user should refresh the frontend session or log out and back in. Backend permissions read the current database user, but frontend navigation state can remain stale until profile/session state refreshes.
+
+For local SQLite development without MariaDB, open the SQLite database and use quoted table names:
+
+```bash
+cd webapi
+sqlite3 crud_data.db
+```
+
+```sql
+SELECT id, username, email, role FROM "user" WHERE username = 'target_username';
+UPDATE "user" SET role = 'admin' WHERE username = 'target_username';
+UPDATE "user" SET role = 'god' WHERE username = 'target_username';
+```
+
+Security guardrails:
+
+- Do not add role selection to the frontend registration form.
+- Do not send `role` in public signup requests.
+- Do not commit admin passwords, password hashes, bootstrap environment variables, or SQL dumps containing credentials.
+- Prefer the CLI for first `god` bootstrap because it avoids exposing a public HTTP privilege-escalation endpoint.
+- Use direct SQL elevation only from trusted operational environments.
+- Record who performed manual role elevation and why, because the current app does not have a persistent audit-events table.
+- Rotate or unset bootstrap password environment variables immediately after use.
 
 ## Database Access
 

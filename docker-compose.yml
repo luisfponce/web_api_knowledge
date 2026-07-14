@@ -6,8 +6,6 @@ services:
       MARIADB_DATABASE: ${MARIADB_DATABASE:-crud_data}
       MARIADB_USER: ${MARIADB_USER:-webapi_user}
       MARIADB_PASSWORD: ${MARIADB_PASSWORD:-replace_with_local_database_password}
-    ports:
-      - "${MARIADB_HOST_PORT:-3306}:3306"
     volumes:
       - webapi-mariadb-data:/var/lib/mysql
     healthcheck:
@@ -19,8 +17,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "${REDIS_HOST_PORT:-6379}:6379"
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -40,8 +36,8 @@ services:
       ENV_MAIL_PASSWORD: ${ENV_MAIL_PASSWORD:-replace_with_local_mail_app_password}
       ENV_MAIL_FROM: ${ENV_MAIL_FROM:-test@example.com}
       ENV_SECRET_KEY: ${ENV_SECRET_KEY:-replace_with_local_jwt_secret}
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     depends_on:
       mariadb:
         condition: service_healthy
@@ -57,8 +53,8 @@ services:
   frontend:
     build:
       context: ./frontend
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     depends_on:
       backend:
         condition: service_healthy

@@ -34,27 +34,26 @@ type AuthProviderProps = {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+    const [initialToken] = useState(() =>
+        typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(SESSION_TOKEN_KEY),
+    )
     const [session, setSession] = useState<SessionState>({
         token: null,
         username: null,
         userId: null,
         role: null,
     })
-    const [isReady, setIsReady] = useState(false)
+    const [isReady, setIsReady] = useState(() => !initialToken)
 
     useEffect(() => {
-        const token = sessionStorage.getItem(SESSION_TOKEN_KEY)
-        if (!token) {
-            setIsReady(true)
-            return
-        }
+        if (!initialToken) return
 
         let cancelled = false
-        getCurrentUser(token)
+        getCurrentUser(initialToken)
             .then((user) => {
                 if (cancelled) return
                 setSession({
-                    token,
+                    token: initialToken,
                     username: user.username,
                     userId: user.id,
                     role: user.role,
@@ -70,7 +69,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return () => {
             cancelled = true
         }
-    }, [])
+    }, [initialToken])
 
     const login = useCallback(async (username: string, password: string) => {
         const resolved = await loginAndResolveUserId({ username, password })

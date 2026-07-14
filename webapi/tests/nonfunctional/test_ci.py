@@ -2,11 +2,13 @@ from fastapi.testclient import TestClient
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[2]))
+from core.prompt_options import MODEL_OPTIONS
 from main import myapp
 client = TestClient(myapp)
 
 TEST_USER = "testuser"
 TEST_PSW  = "testPSW"
+VALID_MODEL_NAME = MODEL_OPTIONS[0]["value"]
 
 def test_root():
     response = client.get("/")
@@ -22,7 +24,7 @@ def test_register_user():
         "name": "user to test",
         "last_name": "my webapp",
         "email": "pytestmyapp@testing.com",
-        "hashed_password": TEST_PSW
+        "password": TEST_PSW
     })
     assert response.status_code in (200, 400)
     if response.status_code == 400:
@@ -47,14 +49,14 @@ def test_register_prompt():
     headers = {"Authorization": f"Bearer {token}", "send_email": "false"}
     response = client.post("/api/v1/prompts", json={
         "user_id": 1,
-        "model_name": "gpt-4.1",
+        "model_name": VALID_MODEL_NAME,
         "prompt_text": "Generate a test response",
         "category": "qa",
         "rate": 5,
     },  headers=headers)
     assert response.status_code == 200
     assert response.json()["user_id"] == 1
-    assert response.json()["model_name"] == "gpt-4.1"
+    assert response.json()["model_name"] == VALID_MODEL_NAME
     assert response.json()["prompt_text"] == "Generate a test response"
     assert response.json()["category"] == "qa"
     assert response.json()["rate"] == 5

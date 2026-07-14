@@ -1,25 +1,11 @@
 from fastapi import APIRouter, Depends
 
 from auth.auth_service import get_current_db_user
+from core.prompt_options import CATEGORY_OPTIONS, MODEL_OPTIONS
 from models.user import User
 
 
 router = APIRouter()
-
-CATEGORY_OPTIONS = [
-    {"value": "qa", "label": "QA"},
-    {"value": "dev", "label": "Development"},
-    {"value": "ops", "label": "Operations"},
-    {"value": "writing", "label": "Writing"},
-    {"value": "research", "label": "Research"},
-]
-
-MODEL_OPTIONS = [
-    {"value": "gpt-4.1", "label": "GPT-4.1"},
-    {"value": "gpt-4o-mini", "label": "GPT-4o mini"},
-    {"value": "gpt-5", "label": "GPT-5"},
-    {"value": "gpt-5-mini", "label": "GPT-5 mini"},
-]
 
 
 @router.get("/categories")

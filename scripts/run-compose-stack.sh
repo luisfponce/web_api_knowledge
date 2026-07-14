@@ -6,11 +6,14 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TIMEOUT_SECONDS=120
 BUILD_FLAG="--build"
 ENV_FILE="${COMPOSE_ENV_FILE:-${REPO_ROOT}/.env}"
+COMPOSE_FILE_ARGS=()
 COMPOSE_ENV_ARGS=()
 COMPOSE_PROJECT_ARGS=()
 CLEAN_MODE="false"
 RESET_DEFAULT="false"
 PROJECT_NAME=""
+CADDYFILE_MISSING="false"
+CADDYFILE_FINAL_WARNING="DEPLOY_ENV=production but ./Caddyfile was not found. The Caddy container cannot run correctly without a Caddyfile. Create ./Caddyfile and rerun the production deployment."
 
 log() {
   printf '[compose-stack] %s\n' "$*"
@@ -18,17 +21,21 @@ log() {
 
 fail() {
   printf '[compose-stack] ERROR: %s\n' "$*" >&2
+  if [[ "${CADDYFILE_MISSING:-false}" == "true" ]]; then
+    printf '[compose-stack] WARNING: %s\n' "${CADDYFILE_FINAL_WARNING}" >&2
+  fi
   exit 1
 }
 
 usage() {
   cat <<'USAGE'
-Usage: ./scripts/run-compose-stack.sh [--clean] [--project-name NAME] [--reset-default] [--no-build] [--timeout SECONDS]
+Usage: ./scripts/run-compose-stack.sh [--env local|production] [--clean] [--project-name NAME] [--reset-default] [--no-build] [--timeout SECONDS]
 
-Starts the MariaDB, Redis, backend, and frontend services with Docker Compose,
-waits for readiness, and verifies minimum connectivity.
+Starts the MariaDB, Redis, backend, frontend, and production Caddy services
+with Docker Compose, waits for readiness, and verifies minimum connectivity.
 
 Options:
+  --env VALUE          Deployment mode: local or production. Defaults to DEPLOY_ENV or local.
   --clean              Use an isolated Compose project and clean its containers/volumes before startup.
   --project-name NAME  Override Compose project name. Defaults to webapi_clean_<timestamp> with --clean.
   --reset-default      With --clean, also remove default project containers/volumes before startup.
@@ -43,6 +50,13 @@ while [[ $# -gt 0 ]]; do
     --clean)
       CLEAN_MODE="true"
       shift
+      ;;
+    --env)
+      [[ $# -ge 2 ]] || fail "--env requires a value"
+      [[ "$2" == "local" || "$2" == "production" ]] || fail "--env must be local or production"
+      DEPLOY_ENV="$2"
+      export DEPLOY_ENV
+      shift 2
       ;;
     --project-name)
       [[ $# -ge 2 ]] || fail "--project-name requires a value"
@@ -89,11 +103,21 @@ detect_compose() {
 }
 
 compose() {
-  "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}" "$@"
+  "${COMPOSE_CMD[@]}" "${COMPOSE_FILE_ARGS[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}" "$@"
 }
 
 warn() {
   printf '[compose-stack] WARNING: %s\n' "$*" >&2
+}
+
+compose_command_prefix() {
+  printf '%q ' "${COMPOSE_CMD[@]}" "${COMPOSE_FILE_ARGS[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}"
+}
+
+print_final_caddyfile_warning() {
+  if [[ "${CADDYFILE_MISSING}" == "true" ]]; then
+    warn "${CADDYFILE_FINAL_WARNING}"
+  fi
 }
 
 is_set() {
@@ -136,6 +160,32 @@ load_env_file() {
   done < "${ENV_FILE}"
 }
 
+configure_deploy_env() {
+  DEPLOY_ENV="${DEPLOY_ENV:-local}"
+
+  case "${DEPLOY_ENV}" in
+    local)
+      COMPOSE_FILE_ARGS=(-f docker-compose.yml -f docker-compose.local.yml)
+      ;;
+    production)
+      COMPOSE_FILE_ARGS=(-f docker-compose.yml -f docker-compose.prod.yml)
+      ;;
+    *)
+      fail "DEPLOY_ENV must be local or production, got: ${DEPLOY_ENV}"
+      ;;
+  esac
+
+  export DEPLOY_ENV
+}
+
+check_caddyfile_for_production() {
+  CADDYFILE_MISSING="false"
+  if [[ "${DEPLOY_ENV}" == "production" && ! -f "${REPO_ROOT}/Caddyfile" ]]; then
+    CADDYFILE_MISSING="true"
+    warn "DEPLOY_ENV=production but ${REPO_ROOT}/Caddyfile was not found. Caddy will not run correctly without it."
+  fi
+}
+
 configure_project_args() {
   if [[ -n "${PROJECT_NAME}" ]]; then
     COMPOSE_PROJECT_ARGS=(-p "${PROJECT_NAME}")
@@ -158,7 +208,7 @@ reset_default_project() {
   fi
 
   log "Removing default Compose project containers and volumes..."
-  "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" down --volumes --remove-orphans || true
+  "${COMPOSE_CMD[@]}" "${COMPOSE_FILE_ARGS[@]}" "${COMPOSE_ENV_ARGS[@]}" down --volumes --remove-orphans || true
 }
 
 clean_project_state() {
@@ -173,6 +223,7 @@ clean_project_state() {
 check_required_files() {
   local missing=()
   local required=(
+    "${REPO_ROOT}/docker-compose.yml"
     "${REPO_ROOT}/webapi/db/__init__.py"
     "${REPO_ROOT}/webapi/db/db_connection.py"
     "${REPO_ROOT}/webapi/db/redis_connection.py"
@@ -181,6 +232,12 @@ check_required_files() {
     "${REPO_ROOT}/frontend/Dockerfile"
   )
   local path
+
+  if [[ "${DEPLOY_ENV}" == "local" ]]; then
+    required+=("${REPO_ROOT}/docker-compose.local.yml")
+  else
+    required+=("${REPO_ROOT}/docker-compose.prod.yml")
+  fi
 
   for path in "${required[@]}"; do
     [[ -f "${path}" ]] || missing+=("${path}")
@@ -313,7 +370,7 @@ wait_for_http() {
 }
 
 verify_api_proxy() {
-  local url="http://127.0.0.1:80/api/v1/auth/login"
+  local url="http://127.0.0.1/api/v1/auth/login"
   local status
 
   log "Checking nginx API proxy: ${url}"
@@ -352,6 +409,20 @@ docker_published_port_in_use() {
 configure_ports() {
   local candidate
 
+  if [[ "${DEPLOY_ENV}" == "production" ]]; then
+    if [[ "${CLEAN_MODE}" == "true" ]]; then
+      if docker_published_port_in_use 80; then
+        fail "Host port 80 is already used. Production Caddy publishes port 80, so stop the conflicting container before clean startup."
+      fi
+
+      if docker_published_port_in_use 443; then
+        fail "Host port 443 is already used. Production Caddy publishes port 443, so stop the conflicting container before clean startup."
+      fi
+    fi
+
+    return
+  fi
+
   if [[ "${CLEAN_MODE}" == "true" ]]; then
     if [[ -z "${MARIADB_HOST_PORT:-}" ]] && docker_published_port_in_use 3306; then
       fail "Host port 3306 is already used. Stop the conflicting container or rerun with MARIADB_HOST_PORT=<free-port>."
@@ -362,11 +433,11 @@ configure_ports() {
     fi
 
     if docker_published_port_in_use 8000; then
-      fail "Host port 8000 is already used. docker-compose.yml hardcodes backend port 8000, so stop the conflicting container before clean startup."
+      fail "Host port 8000 is already used. docker-compose.local.yml publishes backend port 8000, so stop the conflicting container before clean startup."
     fi
 
     if docker_published_port_in_use 80; then
-      fail "Host port 80 is already used. docker-compose.yml hardcodes frontend port 80, so stop the conflicting container before clean startup."
+      fail "Host port 80 is already used. docker-compose.local.yml publishes frontend port 80, so stop the conflicting container before clean startup."
     fi
 
     return
@@ -386,6 +457,10 @@ configure_ports() {
 }
 
 start_stack() {
+  local compose_prefix
+
+  compose_prefix="$(compose_command_prefix)"
+
   if [[ -n "${BUILD_FLAG}" ]]; then
     log "Starting stack with image builds..."
     if compose up "${BUILD_FLAG}" -d; then
@@ -404,36 +479,44 @@ start_stack() {
     printf '\nIf legacy docker-compose hit the ContainerConfig recreate bug, remove only containers for this project and retry:\n' >&2
     printf "  docker ps -a --format '{{.Names}}' | grep '%s' | xargs -r docker rm -f\n" "${PROJECT_NAME}" >&2
     if [[ -n "${BUILD_FLAG}" ]]; then
-      printf "  %s -p '%s' up %s -d\n" "${COMPOSE_CMD[*]}" "${PROJECT_NAME}" "${BUILD_FLAG}" >&2
+      printf "  %s up %s -d\n" "${compose_prefix}" "${BUILD_FLAG}" >&2
     else
-      printf "  %s -p '%s' up -d\n" "${COMPOSE_CMD[*]}" "${PROJECT_NAME}" >&2
+      printf "  %s up -d\n" "${compose_prefix}" >&2
     fi
-    printf 'Clean project teardown: %s down --volumes --remove-orphans\n' "$(printf '%q ' "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}")" >&2
+    printf 'Clean project teardown: %s down --volumes --remove-orphans\n' "${compose_prefix}" >&2
   else
-    printf '\nIf port 3306, 6379, 8000, or 80 is already used by an old webapi container, stop it first.\n' >&2
+    if [[ "${DEPLOY_ENV}" == "production" ]]; then
+      printf '\nIf port 80 or 443 is already used by an old webapi container, stop it first.\n' >&2
+    else
+      printf '\nIf port 3306, 6379, 8000, or 80 is already used by an old webapi container, stop it first.\n' >&2
+    fi
     printf 'Manual backend workflow cleanup example: docker rm -f webapi-mariadb webapi-redis webapi-backend\n' >&2
   fi
   if [[ -n "${BUILD_FLAG}" ]]; then
-    printf 'Redis port override example: REDIS_HOST_PORT=6380 %s up %s -d\n' "${COMPOSE_CMD[*]}" "${BUILD_FLAG}" >&2
+    printf 'Redis port override example: REDIS_HOST_PORT=6380 %s up %s -d\n' "${compose_prefix}" "${BUILD_FLAG}" >&2
   else
-    printf 'Redis port override example: REDIS_HOST_PORT=6380 %s up -d\n' "${COMPOSE_CMD[*]}" >&2
+    printf 'Redis port override example: REDIS_HOST_PORT=6380 %s up -d\n' "${compose_prefix}" >&2
   fi
-  printf 'Compose cleanup example: %s down\n' "${COMPOSE_CMD[*]}" >&2
-  exit 1
+  printf 'Compose cleanup example: %s down\n' "${compose_prefix}" >&2
+  fail "Docker Compose failed to start the stack."
 }
 
 cd "${REPO_ROOT}"
 
 detect_compose
 load_env_file
+configure_deploy_env
 configure_project_args
 check_required_files
 check_environment
+check_caddyfile_for_production
 reset_default_project
 clean_project_state
 configure_ports
 
 log "Using Compose command: ${COMPOSE_CMD[*]}"
+log "Using deployment environment: ${DEPLOY_ENV}"
+log "Using Compose files: ${COMPOSE_FILE_ARGS[*]}"
 if [[ "${CLEAN_MODE}" == "true" ]]; then
   log "Using isolated Compose project: ${PROJECT_NAME}"
 fi
@@ -442,23 +525,53 @@ start_stack
 wait_for_health mariadb "${TIMEOUT_SECONDS}"
 wait_for_health redis "${TIMEOUT_SECONDS}"
 wait_for_health backend "${TIMEOUT_SECONDS}"
-wait_for_http "frontend" "http://127.0.0.1:80/" "${TIMEOUT_SECONDS}"
-wait_for_http "backend direct endpoint" "http://127.0.0.1:8000/" "${TIMEOUT_SECONDS}"
-verify_api_proxy
+
+if [[ "${DEPLOY_ENV}" == "local" ]]; then
+  wait_for_http "frontend" "http://127.0.0.1/" "${TIMEOUT_SECONDS}"
+  wait_for_http "backend direct endpoint" "http://127.0.0.1:8000/" "${TIMEOUT_SECONDS}"
+  verify_api_proxy
+elif [[ "${CADDYFILE_MISSING}" == "true" ]]; then
+  log "Skipping Caddy HTTP verification because ./Caddyfile is missing."
+else
+  wait_for_health caddy "${TIMEOUT_SECONDS}"
+  wait_for_http "frontend through Caddy" "http://127.0.0.1/" "${TIMEOUT_SECONDS}"
+  verify_api_proxy
+fi
+
 verify_database
 verify_redis
 
-log "Stack is ready."
+if [[ "${CADDYFILE_MISSING}" == "true" ]]; then
+  log "Core services are ready; Caddy needs ./Caddyfile before production traffic can work."
+else
+  log "Stack is ready."
+fi
+
+COMPOSE_PREFIX="$(compose_command_prefix)"
+
 printf '\nURLs:\n'
-printf '  Frontend:               http://127.0.0.1:80\n'
-printf '  Backend direct:         http://127.0.0.1:8000/docs\n'
-printf '  Backend through nginx:  http://127.0.0.1:80/api/v1/...\n'
-printf '  MariaDB host port:      127.0.0.1:%s\n' "${MARIADB_HOST_PORT:-3306}"
-printf '  Redis host port:        127.0.0.1:%s\n' "${REDIS_HOST_PORT:-6379}"
+if [[ "${DEPLOY_ENV}" == "local" ]]; then
+  printf '  Frontend:               http://127.0.0.1\n'
+  printf '  Backend direct:         http://127.0.0.1:8000/docs\n'
+  printf '  Backend through nginx:  http://127.0.0.1/api/v1/...\n'
+  printf '  MariaDB host port:      127.0.0.1:%s\n' "${MARIADB_HOST_PORT:-3306}"
+  printf '  Redis host port:        127.0.0.1:%s\n' "${REDIS_HOST_PORT:-6379}"
+else
+  printf '  Frontend through Caddy: http://127.0.0.1\n'
+  printf '  Backend through Caddy:  http://127.0.0.1/api/v1/...\n'
+  printf '  HTTPS through Caddy:    https://<domain-from-Caddyfile>\n'
+  printf '  MariaDB/Redis:          internal Compose network only\n'
+fi
 printf '\nUseful commands:\n'
-printf '  View services:  %s ps\n' "$(printf '%q ' "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}")"
-printf '  View logs:      %s logs backend frontend mariadb redis\n' "$(printf '%q ' "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}")"
-printf '  Check Redis:    %s exec redis redis-cli ping\n' "$(printf '%q ' "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}")"
-printf '  Stop stack:     %s down\n' "$(printf '%q ' "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}")"
-printf '  Reset DB:       %s down -v\n' "$(printf '%q ' "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}")"
-printf '  Get into DB container:  %s exec mariadb sh -c '\''MYSQL_PWD="$MARIADB_PASSWORD" mariadb "$MARIADB_DATABASE" -u "$MARIADB_USER"'\''\n' "$(printf '%q ' "${COMPOSE_CMD[@]}" "${COMPOSE_ENV_ARGS[@]}" "${COMPOSE_PROJECT_ARGS[@]}")"
+if [[ "${DEPLOY_ENV}" == "production" ]]; then
+  printf '  View logs:      %s logs caddy backend frontend mariadb redis\n' "${COMPOSE_PREFIX}"
+else
+  printf '  View logs:      %s logs backend frontend mariadb redis\n' "${COMPOSE_PREFIX}"
+fi
+printf '  View services:  %s ps\n' "${COMPOSE_PREFIX}"
+printf '  Check Redis:    %s exec redis redis-cli ping\n' "${COMPOSE_PREFIX}"
+printf '  Stop stack:     %s down\n' "${COMPOSE_PREFIX}"
+printf '  Reset DB:       %s down -v\n' "${COMPOSE_PREFIX}"
+printf '  Get into DB container:  %s exec mariadb sh -c '\''MYSQL_PWD="$MARIADB_PASSWORD" mariadb "$MARIADB_DATABASE" -u "$MARIADB_USER"'\''\n' "${COMPOSE_PREFIX}"
+
+print_final_caddyfile_warning

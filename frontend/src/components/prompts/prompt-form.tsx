@@ -3,6 +3,7 @@ import type { SelectOption } from '../../features/options/options-types'
 import type { PromptInput, PromptRecord } from '../../features/prompts/prompts-types'
 import { promptSchema } from '../../lib/validation/prompt-schemas'
 import { Button } from '../ui/button'
+import { ComboboxInput } from '../ui/combobox-input'
 import { Input } from '../ui/input'
 import { RatingInput } from '../ui/rating-input'
 import { Select } from '../ui/select'
@@ -59,6 +60,14 @@ export function PromptForm({
             return
         }
 
+        const selectedModel = modelOptions.find((option) => option.value === parsed.data.model_name)
+        if (!selectedModel) {
+            const message = 'Select a known model from the list.'
+            setFieldErrors({ model_name: message })
+            setError(message)
+            return
+        }
+
         setError(null)
         setFieldErrors({})
         await onSubmit(parsed.data)
@@ -69,12 +78,12 @@ export function PromptForm({
 
     return (
         <form className="prompt-form" onSubmit={handleSubmit}>
-            <Select
+            <ComboboxInput
                 label="Model"
                 options={modelOptions}
                 value={form.model_name}
                 disabled={optionsLoading || isSaving}
-                onChange={(e) => handleChange('model_name', e.target.value)}
+                onChange={(value) => handleChange('model_name', value)}
                 error={fieldErrors.model_name}
             />
             <Input
@@ -102,7 +111,7 @@ export function PromptForm({
             {error ? <p className="field-error">{error}</p> : null}
 
             <div className="row gap-sm">
-                <Button type="submit" disabled={isSaving}>
+                <Button type="submit" disabled={optionsLoading || isSaving}>
                     {isSaving ? 'Saving...' : isEdit ? 'Update prompt' : 'Add prompt'}
                 </Button>
                 {isEdit ? (

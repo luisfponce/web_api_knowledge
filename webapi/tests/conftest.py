@@ -13,8 +13,12 @@ from main import myapp
 from db.db_connection import get_session
 from db.redis_connection import get_redis
 from auth.auth_service import crear_jwt
+from core.prompt_options import MODEL_OPTIONS
 from models.user import User
 from models.prompts import Prompts
+
+
+VALID_MODEL_NAME = MODEL_OPTIONS[0]["value"]
 
 
 class FakeRedis:
@@ -77,7 +81,7 @@ def user_payload():
         "name": "Py",
         "last_name": "Tester",
         "email": "pytest_user@example.com",
-        "hashed_password": "pytest_password",
+        "password": "pytest_password",
     }
 
 
@@ -106,7 +110,7 @@ def auth_header(created_user):
 def created_prompt(db_session, created_user):
     prompt = Prompts(
         user_id=created_user.id,
-        model_name="gpt-4.1",
+        model_name=VALID_MODEL_NAME,
         prompt_text="existing prompt",
         category="qa",
         rate=5,

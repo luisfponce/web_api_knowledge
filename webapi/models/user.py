@@ -11,7 +11,12 @@ class User(SQLModel, table=True):
     last_name: str = Field(max_length=100, index=True, nullable=False)
     email: EmailStr = Field(max_length=100, nullable=False)
     hashed_password: str = Field(max_length=255)  # Longer for bcrypt hashes
-    role: str = Field(default="user", max_length=20, nullable=False)
+    role: str = Field(
+        default="user",
+        max_length=20,
+        nullable=False,
+        sa_column_kwargs={"server_default": "user"},
+    )
 
     prompts: List["Prompts"] = Relationship(
         sa_relationship_kwargs={"lazy": "selectin"},

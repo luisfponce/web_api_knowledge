@@ -1,0 +1,16 @@
+services:
+  mariadb:
+    ports:
+      - "${MARIADB_HOST_PORT:-3306}:3306"
+
+  redis:
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+
+  backend:
+    ports:
+      - "8000:8000"
+
+  frontend:
+    ports:
+      - "80:80"

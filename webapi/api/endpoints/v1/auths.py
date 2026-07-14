@@ -35,15 +35,13 @@ def signup(payload: UserCreate, session: Session = Depends(get_session)):
     user_exists = result.one_or_none()
     if user_exists:
         raise HTTPException(status_code=400, detail="username already taken")
-    if payload.role not in {"user", "admin", "god"}:
-        raise HTTPException(status_code=400, detail="invalid role")
     user = User(
         username=payload.username,
         name=payload.name,
         last_name=payload.last_name,
         email=payload.email,
-        hashed_password=sha256_crypt.hash(payload.hashed_password),
-        role=payload.role,
+        hashed_password=sha256_crypt.hash(payload.password),
+        role="user",
     )
     session.add(user)
     session.commit()
