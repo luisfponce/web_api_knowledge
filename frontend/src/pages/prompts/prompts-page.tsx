@@ -132,6 +132,12 @@ export function PromptsPage() {
         })
     }
 
+    const prompts = promptsQuery.data ?? []
+    const averageRating = prompts.length
+        ? prompts.reduce((total, prompt) => total + prompt.rate, 0) / prompts.length
+        : 0
+    const categoryCount = new Set(prompts.map((prompt) => prompt.category)).size
+
     return (
         <section className="stack">
             <PageHeader
@@ -139,7 +145,23 @@ export function PromptsPage() {
                 title={t('prompts.title')}
                 description={t('prompts.description')}
             />
-            <Card>
+
+            <div className="stats-grid">
+                <Card className="stat-card">
+                    <span className="label">{t('prompts.stats.total')}</span>
+                    <strong>{prompts.length}</strong>
+                </Card>
+                <Card className="stat-card">
+                    <span className="label">{t('prompts.stats.averageRating')}</span>
+                    <strong>{prompts.length ? t('common.rating', { value: averageRating.toFixed(1) }) : t('prompts.stats.emptyRating')}</strong>
+                </Card>
+                <Card className="stat-card">
+                    <span className="label">{t('prompts.stats.categories')}</span>
+                    <strong>{categoryCount}</strong>
+                </Card>
+            </div>
+
+            <Card className="composer-card">
                 <h1>{editingPrompt ? t('prompts.edit') : t('prompts.create')}</h1>
                 <PromptForm
                     key={editingPrompt?.id ?? 'new-prompt'}
@@ -156,13 +178,18 @@ export function PromptsPage() {
                 ) : null}
             </Card>
 
-            <Card>
-                <h2>{t('prompts.listTitle')}</h2>
+            <Card className="library-card">
+                <div className="section-heading">
+                    <div>
+                        <h2>{t('prompts.listTitle')}</h2>
+                        <p className="muted">{t('prompts.listDescription')}</p>
+                    </div>
+                </div>
                 {promptsQuery.isLoading ? <p className="muted">{t('common.loading')}</p> : null}
                 {error ? <InlineError message={error} /> : null}
                 {promptsQuery.data ? (
                     <PromptList
-                        prompts={promptsQuery.data}
+                        prompts={prompts}
                         onEdit={setEditingPrompt}
                         onDelete={setPromptToDelete}
                     />
@@ -173,6 +200,7 @@ export function PromptsPage() {
                 title={t('prompts.deleteTitle')}
                 description={t('prompts.deleteDescription')}
                 confirmLabel={t('prompts.deleteConfirm')}
+                cancelLabel={t('common.cancel')}
                 busy={deleteMutation.isPending}
                 onCancel={() => setPromptToDelete(null)}
                 onConfirm={handleDelete}

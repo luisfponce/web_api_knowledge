@@ -46,7 +46,10 @@ export function PromptList({ prompts, onEdit, onDelete }: PromptListProps) {
                             className="prompt-list-item"
                             onClick={() => setSelectedPrompt(prompt)}
                         >
-                            <span className="prompt-list-summary">{summary}</span>
+                            <span className="prompt-list-content">
+                                <strong>{prompt.model_name}</strong>
+                                <span className="prompt-list-summary">{summary}</span>
+                            </span>
                             <span className="prompt-list-meta">
                                 <span className="badge">{prompt.category}</span>
                                 <span className="muted">{t('common.rating', { value: prompt.rate })}</span>

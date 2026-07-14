@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from './button'
 
 type ConfirmDialogProps = {
@@ -21,6 +22,8 @@ export function ConfirmDialog({
     onConfirm,
     onCancel,
 }: ConfirmDialogProps) {
+    const { t } = useTranslation()
+
     if (!open) return null
 
     return (
@@ -39,7 +42,7 @@ export function ConfirmDialog({
                         {cancelLabel}
                     </Button>
                     <Button variant="danger" onClick={onConfirm} disabled={busy}>
-                        {busy ? 'Working...' : confirmLabel}
+                        {busy ? t('common.working') : confirmLabel}
                     </Button>
                 </div>
             </div>

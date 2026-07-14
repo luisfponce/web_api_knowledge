@@ -5,6 +5,8 @@ import { Card } from '../../components/ui/card'
 import { InlineError } from '../../components/ui/inline-error'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
+import { LanguageSwitcher } from '../../components/i18n/language-switcher'
+import { ThemeToggle } from '../../components/ui/theme-toggle'
 import { useAuth } from '../../features/auth/auth-store'
 import { loginSchema } from '../../lib/validation/auth-schemas'
 
@@ -41,38 +43,55 @@ export function LoginPage() {
 
     return (
         <div className="centered-page auth-gradient">
-            <Card className="auth-card">
-                <h1>{t('auth.loginTitle')}</h1>
-                <p className="muted">{t('auth.loginDescription')}</p>
-                <form className="stack" onSubmit={onSubmit}>
-                    {searchParams.get('registered') ? (
-                        <div className="success-panel">{t('auth.registered')}</div>
-                    ) : null}
-                    <Input
-                        label={t('auth.username')}
-                        value={username}
-                        onChange={(event) => setUsername(event.target.value)}
-                        autoComplete="username"
-                    />
-                    <Input
-                        label={t('auth.password')}
-                        value={password}
-                        type="password"
-                        onChange={(event) => setPassword(event.target.value)}
-                        autoComplete="current-password"
-                    />
-                    {error ? <InlineError message={error} /> : null}
-                    <Button type="submit" disabled={loading}>
-                        {loading ? t('auth.signingIn') : t('nav.signIn')}
-                    </Button>
-                    <Link className="text-link" to="/recovery">
-                        {t('auth.forgotPassword')}
+            <div className="auth-frame">
+                <div className="auth-public-bar">
+                    <Link className="brand-mark" to="/">
+                        <span className="brand-dot" aria-hidden="true" />
+                        <span>{t('app.name')}</span>
                     </Link>
-                    <Link className="text-link" to="/register">
-                        {t('auth.needAccount')}
-                    </Link>
-                </form>
-            </Card>
+                    <div className="row gap-sm wrap">
+                        <LanguageSwitcher />
+                        <ThemeToggle />
+                    </div>
+                </div>
+                <Card className="auth-card">
+                    <div>
+                        <h1>{t('auth.loginTitle')}</h1>
+                        <p className="muted">{t('auth.loginDescription')}</p>
+                    </div>
+                    <form className="stack" onSubmit={onSubmit}>
+                        {searchParams.get('registered') ? (
+                            <div className="success-panel">{t('auth.registered')}</div>
+                        ) : null}
+                        <Input
+                            label={t('auth.username')}
+                            value={username}
+                            onChange={(event) => setUsername(event.target.value)}
+                            autoComplete="username"
+                        />
+                        <Input
+                            label={t('auth.password')}
+                            value={password}
+                            type="password"
+                            onChange={(event) => setPassword(event.target.value)}
+                            autoComplete="current-password"
+                        />
+                        {error ? <InlineError message={error} /> : null}
+                        <Button type="submit" disabled={loading}>
+                            {loading ? t('auth.signingIn') : t('nav.signIn')}
+                        </Button>
+                        <Link className="text-link" to="/recovery">
+                            {t('auth.forgotPassword')}
+                        </Link>
+                        <Link className="text-link" to="/register">
+                            {t('auth.needAccount')}
+                        </Link>
+                        <Link className="text-link" to="/">
+                            {t('auth.backToLanding')}
+                        </Link>
+                    </form>
+                </Card>
+            </div>
         </div>
     )
 }
