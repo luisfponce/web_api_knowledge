@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/ui/card'
 import { InlineError } from '../../components/ui/inline-error'
@@ -8,6 +9,7 @@ import { useAuth } from '../../features/auth/auth-store'
 import { loginSchema } from '../../lib/validation/auth-schemas'
 
 export function LoginPage() {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const { login } = useAuth()
@@ -21,7 +23,7 @@ export function LoginPage() {
 
         const parsed = loginSchema.safeParse({ username, password })
         if (!parsed.success) {
-            setError(parsed.error.issues[0]?.message ?? 'Invalid credentials')
+            setError(parsed.error.issues[0]?.message ?? t('auth.invalidCredentials'))
             return
         }
 
@@ -31,7 +33,7 @@ export function LoginPage() {
             await login(parsed.data.username, parsed.data.password)
             navigate('/app/prompts', { replace: true })
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Unable to login')
+            setError(err instanceof Error ? err.message : t('auth.unableToLogin'))
         } finally {
             setLoading(false)
         }
@@ -40,20 +42,20 @@ export function LoginPage() {
     return (
         <div className="centered-page auth-gradient">
             <Card className="auth-card">
-                <h1>Login</h1>
-                <p className="muted">Use your API account credentials.</p>
+                <h1>{t('auth.loginTitle')}</h1>
+                <p className="muted">{t('auth.loginDescription')}</p>
                 <form className="stack" onSubmit={onSubmit}>
                     {searchParams.get('registered') ? (
-                        <div className="success-panel">Account created with the default user role. Sign in with your new credentials.</div>
+                        <div className="success-panel">{t('auth.registered')}</div>
                     ) : null}
                     <Input
-                        label="Username"
+                        label={t('auth.username')}
                         value={username}
                         onChange={(event) => setUsername(event.target.value)}
                         autoComplete="username"
                     />
                     <Input
-                        label="Password"
+                        label={t('auth.password')}
                         value={password}
                         type="password"
                         onChange={(event) => setPassword(event.target.value)}
@@ -61,13 +63,13 @@ export function LoginPage() {
                     />
                     {error ? <InlineError message={error} /> : null}
                     <Button type="submit" disabled={loading}>
-                        {loading ? 'Signing in...' : 'Sign in'}
+                        {loading ? t('auth.signingIn') : t('nav.signIn')}
                     </Button>
                     <Link className="text-link" to="/recovery">
-                        Forgot password?
+                        {t('auth.forgotPassword')}
                     </Link>
                     <Link className="text-link" to="/register">
-                        Need an account? Create one
+                        {t('auth.needAccount')}
                     </Link>
                 </form>
             </Card>

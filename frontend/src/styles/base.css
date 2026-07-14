@@ -220,6 +220,16 @@ h2 {
     outline-offset: 1px;
 }
 
+.language-switcher {
+    display: inline-flex;
+}
+
+.language-select {
+    min-width: 7.5rem;
+    padding-block: 0.45rem;
+    font-size: var(--font-sm);
+}
+
 .field-combobox {
     position: relative;
 }

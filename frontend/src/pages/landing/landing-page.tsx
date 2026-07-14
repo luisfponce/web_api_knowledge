@@ -1,52 +1,52 @@
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { LanguageSwitcher } from '../../components/i18n/language-switcher'
 import { Badge } from '../../components/ui/badge'
 import { Card } from '../../components/ui/card'
 
-const features = [
-    'Search prompts by content, model, category, and rating',
-    'Reuse proven prompts with copy, edit, duplicate, and delete actions',
-    'Admin-ready RBAC with prompt monitoring and future analytics',
-]
-
 export function LandingPage() {
+    const { t } = useTranslation()
+    const features = t('landing.features', { returnObjects: true }) as string[]
+
     return (
         <main className="marketing-page">
             <nav className="marketing-nav">
-                <strong>Prompt Catalog</strong>
+                <strong>{t('app.name')}</strong>
                 <div className="row gap-sm">
-                    <Link className="text-link" to="/login">Sign in</Link>
-                    <Link to="/register" className="button-link">Create account</Link>
+                    <LanguageSwitcher />
+                    <Link className="text-link" to="/login">{t('nav.signIn')}</Link>
+                    <Link to="/register" className="button-link">{t('nav.createAccount')}</Link>
                 </div>
             </nav>
             <section className="hero-grid">
                 <div className="stack">
-                    <Badge tone="accent">Portfolio-ready full-stack product</Badge>
-                    <h1 className="hero-title">Build your personal catalog of prompts that actually work.</h1>
+                    <Badge tone="accent">{t('landing.badge')}</Badge>
+                    <h1 className="hero-title">{t('landing.title')}</h1>
                     <p className="hero-copy">
-                        Save, classify, rate, and reuse AI prompts with a focused catalog experience backed by FastAPI, JWT auth, MariaDB, Redis, and React Query.
+                        {t('landing.copy')}
                     </p>
                     <div className="row gap-sm wrap">
-                        <Link to="/register" className="button-link">Create account</Link>
-                        <Link to="/login" className="button-link button-link-secondary">Sign in</Link>
+                        <Link to="/register" className="button-link">{t('nav.createAccount')}</Link>
+                        <Link to="/login" className="button-link button-link-secondary">{t('nav.signIn')}</Link>
                     </div>
                 </div>
                 <Card className="showcase-card">
                     <div className="section-heading">
                         <Badge tone="accent">GPT-4</Badge>
-                        <span className="badge">Rating 5/5</span>
+                        <span className="badge">{t('common.rating', { value: 5 })}</span>
                     </div>
-                    <h2>Reusable Architecture Reviewer</h2>
+                    <h2>{t('landing.showcaseTitle')}</h2>
                     <p>
-                        Review this API endpoint for authorization gaps, unsafe schemas, and missing regression tests. Return findings by severity.
+                        {t('landing.showcasePrompt')}
                     </p>
-                    <p className="muted">Category: code-review · Owner: you</p>
+                    <p className="muted">{t('landing.showcaseMeta')}</p>
                 </Card>
             </section>
             <section className="feature-grid">
                 {features.map((feature) => (
                     <Card key={feature}>
                         <h3>{feature}</h3>
-                        <p className="muted">Designed to turn a basic CRUD into a product recruiters and users can understand quickly.</p>
+                        <p className="muted">{t('landing.featureDescription')}</p>
                     </Card>
                 ))}
             </section>
@@ -54,7 +54,7 @@ export function LandingPage() {
                 <span>React + TypeScript + Vite</span>
                 <span>FastAPI JWT APIs</span>
                 <span>MariaDB + Redis</span>
-                <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">Local API docs</a>
+                <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">{t('landing.apiDocs')}</a>
             </section>
         </main>
     )

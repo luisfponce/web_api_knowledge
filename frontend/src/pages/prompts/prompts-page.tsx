@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Card } from '../../components/ui/card'
 import { ConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InlineError } from '../../components/ui/inline-error'
@@ -23,6 +24,7 @@ import type {
 } from '../../features/prompts/prompts-types'
 
 export function PromptsPage() {
+    const { t } = useTranslation()
     const { session } = useAuth()
     const queryClient = useQueryClient()
     const [editingPrompt, setEditingPrompt] = useState<PromptRecord | null>(null)
@@ -68,7 +70,7 @@ export function PromptsPage() {
     const createMutation = useMutation({
         mutationFn: async (value: PromptInput) => {
             if (!token) {
-                throw new Error('Session is not available')
+                throw new Error(t('prompts.errors.sessionUnavailable'))
             }
             return createPrompt(token, userId, value)
         },
@@ -77,14 +79,14 @@ export function PromptsPage() {
             setError(null)
         },
         onError: (err) => {
-            setError(err instanceof Error ? err.message : 'Unable to create prompt')
+            setError(err instanceof Error ? err.message : t('prompts.errors.create'))
         },
     })
 
     const updateMutation = useMutation({
         mutationFn: async (value: PromptInput) => {
             if (!token || userId === null || !editingPrompt) {
-                throw new Error('Session or selected prompt is not available')
+                throw new Error(t('prompts.errors.selectedUnavailable'))
             }
             return updatePrompt(token, editingPrompt.id, userId, value)
         },
@@ -94,14 +96,14 @@ export function PromptsPage() {
             setError(null)
         },
         onError: (err) => {
-            setError(err instanceof Error ? err.message : 'Unable to update prompt')
+            setError(err instanceof Error ? err.message : t('prompts.errors.update'))
         },
     })
 
     const deleteMutation = useMutation({
         mutationFn: async (prompt: PromptRecord) => {
             if (!token) {
-                throw new Error('Session is not available')
+                throw new Error(t('prompts.errors.sessionUnavailable'))
             }
             return deletePrompt(token, prompt.id)
         },
@@ -110,7 +112,7 @@ export function PromptsPage() {
             setError(null)
         },
         onError: (err) => {
-            setError(err instanceof Error ? err.message : 'Unable to delete prompt')
+            setError(err instanceof Error ? err.message : t('prompts.errors.delete'))
         },
     })
 
@@ -133,12 +135,12 @@ export function PromptsPage() {
     return (
         <section className="stack">
             <PageHeader
-                eyebrow="Catalog"
-                title="Your prompt library"
-                description="Save the prompts that worked, then find and reuse them faster."
+                eyebrow={t('prompts.eyebrow')}
+                title={t('prompts.title')}
+                description={t('prompts.description')}
             />
             <Card>
-                <h1>{editingPrompt ? 'Edit prompt' : 'Create prompt'}</h1>
+                <h1>{editingPrompt ? t('prompts.edit') : t('prompts.create')}</h1>
                 <PromptForm
                     key={editingPrompt?.id ?? 'new-prompt'}
                     initialValue={editingPrompt}
@@ -150,13 +152,13 @@ export function PromptsPage() {
                     onCancelEdit={() => setEditingPrompt(null)}
                 />
                 {categoriesQuery.error || modelsQuery.error ? (
-                    <InlineError message="Unable to load dropdown options" />
+                    <InlineError message={t('prompts.dropdownError')} />
                 ) : null}
             </Card>
 
             <Card>
-                <h2>Your prompts</h2>
-                {promptsQuery.isLoading ? <p className="muted">Loading...</p> : null}
+                <h2>{t('prompts.listTitle')}</h2>
+                {promptsQuery.isLoading ? <p className="muted">{t('common.loading')}</p> : null}
                 {error ? <InlineError message={error} /> : null}
                 {promptsQuery.data ? (
                     <PromptList
@@ -168,9 +170,9 @@ export function PromptsPage() {
             </Card>
             <ConfirmDialog
                 open={Boolean(promptToDelete)}
-                title="Delete prompt?"
-                description="This removes the prompt from your catalog. This action cannot be undone."
-                confirmLabel="Delete prompt"
+                title={t('prompts.deleteTitle')}
+                description={t('prompts.deleteDescription')}
+                confirmLabel={t('prompts.deleteConfirm')}
                 busy={deleteMutation.isPending}
                 onCancel={() => setPromptToDelete(null)}
                 onConfirm={handleDelete}
