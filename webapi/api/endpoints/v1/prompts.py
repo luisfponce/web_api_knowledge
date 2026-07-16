@@ -26,6 +26,7 @@ async def create_prompt(
 
     created_prompt = Prompts(
         user_id=prompt_user.id,
+        title=prompt.title,
         model_name=prompt.model_name,
         prompt_text=prompt.prompt_text,
         category=prompt.category,
@@ -102,6 +103,7 @@ def update_prompt(prompt_id: int, prompt: PromptCreate,
         raise HTTPException(status_code=404, detail="User not found for this prompt")
     if target_user_id != existing_prompt.user_id and current_user.role != "god":
         raise HTTPException(status_code=403, detail="Cannot reassign this prompt")
+    existing_prompt.title = prompt.title
     existing_prompt.model_name = prompt.model_name
     existing_prompt.prompt_text = prompt.prompt_text
     existing_prompt.category = prompt.category

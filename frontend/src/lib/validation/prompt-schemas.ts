@@ -3,6 +3,7 @@ import { z } from 'zod'
 const PROMPT_TEXT_MAX_CHARS = 1_000_000
 
 export const promptSchema = z.object({
+    title: z.string().trim().min(1, 'Title is required').max(120, 'Title must be at most 120 characters'),
     model_name: z.string().trim().min(1, 'Model name is required'),
     prompt_text: z
         .string()

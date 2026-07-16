@@ -39,6 +39,7 @@ def create_prompt(
 ) -> Prompts:
     prompt = Prompts(
         user_id=user_id,
+        title=f"{category} prompt title",
         model_name=model_name,
         prompt_text=f"{category} prompt {rate}",
         category=category,
@@ -53,6 +54,7 @@ def create_prompt(
 def test_create_prompt_success(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
+        "title": "Answer generator",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "Generate answer",
         "category": "qa",
@@ -63,6 +65,7 @@ def test_create_prompt_success(client, auth_header, created_user):
 
     assert response.status_code == 200
     assert response.json()["user_id"] == created_user.id
+    assert response.json()["title"] == "Answer generator"
     assert response.json()["model_name"] == VALID_MODEL_NAME
 
 
@@ -70,6 +73,7 @@ def test_create_prompt_accepts_prompt_text_longer_than_150_chars(client, auth_he
     prompt_text = "x" * 151
     payload = {
         "user_id": created_user.id,
+        "title": "Long prompt",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": prompt_text,
         "category": "qa",
@@ -85,6 +89,7 @@ def test_create_prompt_accepts_prompt_text_longer_than_150_chars(client, auth_he
 def test_create_prompt_rejects_prompt_text_above_max_chars(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
+        "title": "Too long prompt",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "x" * (PROMPT_TEXT_MAX_CHARS + 1),
         "category": "qa",
@@ -99,6 +104,7 @@ def test_create_prompt_rejects_prompt_text_above_max_chars(client, auth_header, 
 def test_create_prompt_rejects_unknown_model_name(client, auth_header, created_user, db_session):
     payload = {
         "user_id": created_user.id,
+        "title": "Unknown model",
         "model_name": "unknown-model",
         "prompt_text": "Unknown model should not persist",
         "category": "qa",
@@ -115,6 +121,7 @@ def test_create_prompt_rejects_unknown_model_name(client, auth_header, created_u
 def test_create_prompt_unauthorized_returns_401(client, created_user):
     payload = {
         "user_id": created_user.id,
+        "title": "Unauthorized prompt",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "Generate answer",
         "category": "qa",
@@ -134,6 +141,7 @@ def test_create_prompt_unauthorized_returns_401(client, created_user):
 def test_create_prompt_user_not_found_returns_404(client, auth_header):
     payload = {
         "user_id": 9999,
+        "title": "Missing user prompt",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "Generate answer",
         "category": "qa",
@@ -150,6 +158,7 @@ def test_regular_user_cannot_create_prompt_for_another_user(client, auth_header,
     other_user = create_user(db_session, "create_other_user")
     payload = {
         "user_id": other_user.id,
+        "title": "Forbidden prompt",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "not allowed",
         "category": "qa",
@@ -174,6 +183,7 @@ def test_create_prompt_send_email_true_calls_email(client, auth_header, created_
 
     payload = {
         "user_id": created_user.id,
+        "title": "Notification prompt",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "Notify me",
         "category": "qa",
@@ -195,6 +205,7 @@ def test_create_prompt_send_email_exception_still_success(client, auth_header, c
 
     payload = {
         "user_id": created_user.id,
+        "title": "Email resilient prompt",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "Ignore email failure",
         "category": "ops",
@@ -285,6 +296,7 @@ def test_get_prompt_missing_returns_404(client, auth_header):
 def test_update_prompt_success(client, auth_header, created_prompt, created_user):
     payload = {
         "user_id": created_user.id,
+        "title": "Updated title",
         "model_name": ALTERNATE_MODEL_NAME,
         "prompt_text": "Updated prompt",
         "category": "dev",
@@ -295,12 +307,14 @@ def test_update_prompt_success(client, auth_header, created_prompt, created_user
 
     assert response.status_code == 200
     assert response.json()["model_name"] == ALTERNATE_MODEL_NAME
+    assert response.json()["title"] == "Updated title"
     assert response.json()["prompt_text"] == "Updated prompt"
 
 
 def test_update_prompt_rejects_unknown_model_name(client, auth_header, created_prompt, created_user, db_session):
     payload = {
         "user_id": created_user.id,
+        "title": "Unknown update",
         "model_name": "unknown-model",
         "prompt_text": "Unknown model should not update",
         "category": "dev",
@@ -318,6 +332,7 @@ def test_update_prompt_rejects_unknown_model_name(client, auth_header, created_p
 def test_update_prompt_missing_returns_404(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
+        "title": "Missing update",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "Updated prompt",
         "category": "qa",
@@ -333,6 +348,7 @@ def test_update_prompt_missing_returns_404(client, auth_header, created_user):
 def test_update_prompt_user_not_found_returns_404(client, auth_header, created_prompt):
     payload = {
         "user_id": 9999,
+        "title": "Missing update user",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "Updated prompt",
         "category": "qa",
@@ -349,6 +365,7 @@ def test_god_can_update_another_users_prompt(client, db_session, created_prompt)
     god = create_user(db_session, "update_god", role="god")
     payload = {
         "user_id": created_prompt.user_id,
+        "title": "God update title",
         "model_name": ALTERNATE_MODEL_NAME,
         "prompt_text": "god update",
         "category": "research",
@@ -362,6 +379,7 @@ def test_god_can_update_another_users_prompt(client, db_session, created_prompt)
     )
 
     assert response.status_code == 200
+    assert response.json()["title"] == "God update title"
     assert response.json()["model_name"] == ALTERNATE_MODEL_NAME
     assert response.json()["prompt_text"] == "god update"
 
@@ -369,6 +387,7 @@ def test_god_can_update_another_users_prompt(client, db_session, created_prompt)
 def test_prompt_rating_validation_rejects_out_of_range_values(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
+        "title": "Bad rating",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "bad rating",
         "category": "qa",
@@ -383,6 +402,7 @@ def test_prompt_rating_validation_rejects_out_of_range_values(client, auth_heade
 def test_prompt_rating_validation_rejects_non_integer_values(client, auth_header, created_user):
     payload = {
         "user_id": created_user.id,
+        "title": "Decimal rating",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "bad rating",
         "category": "qa",
@@ -440,6 +460,7 @@ def test_regular_user_cannot_read_another_users_prompt(client, auth_header, db_s
     db_session.refresh(other_user)
     prompt = Prompts(
         user_id=other_user.id,
+        title="Private prompt",
         model_name=VALID_MODEL_NAME,
         prompt_text="private prompt",
         category="qa",
@@ -477,6 +498,7 @@ def test_admin_can_read_all_prompts_but_cannot_update(client, db_session, create
         f"/api/v1/prompts/{created_prompt.id}",
         json={
             "user_id": created_prompt.user_id,
+            "title": "Admin update title",
             "model_name": ALTERNATE_MODEL_NAME,
             "prompt_text": "admin update",
             "category": "dev",

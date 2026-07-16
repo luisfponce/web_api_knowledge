@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, Body, Query
 from sqlmodel import Session, select
 from models.user import User
+from models.prompts import Prompts
 from passlib.hash import sha256_crypt
 from db.db_connection import get_session
 from auth.auth_service import authenticate_user, crear_jwt, get_current_user, get_current_db_user
+from core.creator_prompts import get_creator_prompt_seeds
 from infrastructure.email.smtp_service import send_email
 import secrets
 import base64
@@ -41,11 +43,43 @@ def signup(payload: UserCreate, session: Session = Depends(get_session)):
         last_name=payload.last_name,
         email=payload.email,
         hashed_password=sha256_crypt.hash(payload.password),
+        preferred_language=payload.preferred_language,
         role="user",
     )
     session.add(user)
+    session.flush()
+
+    for seed in get_creator_prompt_seeds(user.preferred_language):
+        session.add(
+            Prompts(
+                user_id=user.id,
+                title=seed["title"],
+                model_name=seed["model_name"],
+                prompt_text=seed["prompt_text"],
+                category=seed["category"],
+                rate=seed["rate"],
+            )
+        )
+
     session.commit()
-    return {"message": "User created successfully"}
+    session.refresh(user)
+    access_token = crear_jwt(
+        data={"sub": user.username, "user_id": user.id, "role": user.role}
+    )
+    return {
+        "message": "User created successfully",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "username": user.username,
+            "name": user.name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "preferred_language": user.preferred_language,
+            "role": user.role,
+        },
+    }
 
 @router.post("/login")
 def login(request: LoginRequest, session: Session = Depends(get_session)):

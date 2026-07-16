@@ -8,14 +8,15 @@ import {
     useState,
     type ReactNode,
 } from 'react'
-import { getCurrentUser, loginAndResolveUserId } from './auth-service'
-import type { UserRole } from './auth-types'
+import { getCurrentUser, loginAndResolveUserId, signupAndResolveSession } from './auth-service'
+import type { PreferredLanguage, RegisterInput, UserRole } from './auth-types'
 
 type SessionState = {
     token: string | null
     username: string | null
     userId: number | null
     role: UserRole | null
+    preferredLanguage: PreferredLanguage | null
 }
 
 type AuthContextValue = {
@@ -23,6 +24,7 @@ type AuthContextValue = {
     isAuthenticated: boolean
     isReady: boolean
     login: (username: string, password: string) => Promise<void>
+    signup: (input: RegisterInput) => Promise<void>
     logout: () => void
 }
 
@@ -42,6 +44,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         username: null,
         userId: null,
         role: null,
+        preferredLanguage: null,
     })
     const [isReady, setIsReady] = useState(() => !initialToken)
 
@@ -57,6 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                     username: user.username,
                     userId: user.id,
                     role: user.role,
+                    preferredLanguage: user.preferred_language,
                 })
             })
             .catch(() => {
@@ -79,12 +83,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
             username: resolved.username,
             userId: resolved.userId,
             role: resolved.role,
+            preferredLanguage: resolved.preferredLanguage,
+        })
+    }, [])
+
+    const signup = useCallback(async (input: RegisterInput) => {
+        const resolved = await signupAndResolveSession(input)
+        sessionStorage.setItem(SESSION_TOKEN_KEY, resolved.token)
+        setSession({
+            token: resolved.token,
+            username: resolved.username,
+            userId: resolved.userId,
+            role: resolved.role,
+            preferredLanguage: resolved.preferredLanguage,
         })
     }, [])
 
     const logout = useCallback(() => {
         sessionStorage.removeItem(SESSION_TOKEN_KEY)
-        setSession({ token: null, username: null, userId: null, role: null })
+        setSession({ token: null, username: null, userId: null, role: null, preferredLanguage: null })
     }, [])
 
     const value = useMemo<AuthContextValue>(
@@ -93,9 +110,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isAuthenticated: Boolean(session.token),
             isReady,
             login,
+            signup,
             logout,
         }),
-        [isReady, login, logout, session],
+        [isReady, login, logout, session, signup],
     )
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -4,6 +4,7 @@ from passlib.hash import sha256_crypt
 from sqlmodel import select
 
 from models.user import User
+from models.prompts import Prompts
 import api.endpoints.v1.auths as auths_module
 from auth.auth_service import validar_jwt_raw
 
@@ -12,14 +13,30 @@ def test_signup_success(client, user_payload, db_session):
     response = client.post("/api/v1/auth/signup", json=user_payload)
 
     assert response.status_code == 200
-    assert response.json() == {"message": "User created successfully"}
+    body = response.json()
+    assert body["message"] == "User created successfully"
+    assert body["token_type"] == "bearer"
+    assert isinstance(body["access_token"], str)
+    assert body["user"]["username"] == user_payload["username"]
+    assert body["user"]["preferred_language"] == "es"
 
     created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
     assert created is not None
     assert isinstance(created.id, int)
     assert created.role == "user"
+    assert created.preferred_language == "es"
     assert created.hashed_password != user_payload["password"]
     assert sha256_crypt.verify(user_payload["password"], created.hashed_password)
+
+    seeded_prompts = db_session.exec(select(Prompts).where(Prompts.user_id == created.id)).all()
+    assert len(seeded_prompts) == 3
+    assert {prompt.title for prompt in seeded_prompts} == {
+        "Experto cotizador de electrodomesticos",
+        "Experto nutriologo personal",
+        "Planeador para influencer",
+    }
+    assert {prompt.model_name for prompt in seeded_prompts} == {"gpt"}
+    assert {prompt.rate for prompt in seeded_prompts} == {5}
 
 
 def test_signup_rejects_client_supplied_id(client, user_payload, db_session):
@@ -82,11 +99,49 @@ def test_signup_duplicate_username_returns_400(client, db_session):
             "last_name": "user",
             "email": "new_dup_user@example.com",
             "password": "password",
+            "preferred_language": "es",
         },
     )
 
     assert response.status_code == 400
     assert response.json()["detail"] == "username already taken"
+    prompts = db_session.exec(select(Prompts)).all()
+    assert prompts == []
+
+
+def test_signup_preferred_language_controls_seed_prompt_language(client, db_session):
+    response = client.post(
+        "/api/v1/auth/signup",
+        json={
+            "username": "english_user",
+            "name": "English",
+            "last_name": "User",
+            "email": "english_user@example.com",
+            "password": "password",
+            "preferred_language": "en",
+        },
+    )
+
+    assert response.status_code == 200
+    created = db_session.exec(select(User).where(User.username == "english_user")).first()
+    seeded_prompts = db_session.exec(select(Prompts).where(Prompts.user_id == created.id)).all()
+    assert response.json()["user"]["preferred_language"] == "en"
+    assert {prompt.title for prompt in seeded_prompts} == {
+        "Appliance Value Expert",
+        "Personal Meal Planning Expert",
+        "Influencer Content Planner",
+    }
+
+
+def test_signup_rejects_unsupported_preferred_language(client, user_payload, db_session):
+    response = client.post(
+        "/api/v1/auth/signup",
+        json={**user_payload, "preferred_language": "fr"},
+    )
+
+    assert response.status_code == 422
+    created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
+    assert created is None
 
 
 def test_signup_rejects_client_supplied_role(client, user_payload, db_session):

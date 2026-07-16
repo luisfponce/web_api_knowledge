@@ -396,6 +396,10 @@ textarea:focus-visible {
     font-size: var(--font-sm);
 }
 
+.form-helper {
+    margin-top: calc(var(--space-2) * -1);
+}
+
 .list {
     display: grid;
     gap: var(--space-3);
@@ -483,11 +487,17 @@ textarea:focus-visible {
 
 .prompt-detail-dialog {
     width: min(720px, 100%);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 0;
 }
 
 .prompt-detail-body {
     display: grid;
     gap: var(--space-4);
+    min-height: 0;
+    overflow: auto;
+    padding-right: var(--space-1);
+    scrollbar-gutter: stable;
 }
 
 .prompt-detail-field {
@@ -496,12 +506,11 @@ textarea:focus-visible {
 }
 
 .prompt-detail-text {
-    max-height: min(46vh, 28rem);
-    overflow: auto;
     padding: var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     background: var(--surface-soft);
+    overflow-wrap: anywhere;
     white-space: pre-wrap;
 }
 
@@ -608,6 +617,9 @@ textarea:focus-visible {
 
 .dialog-panel {
     width: min(440px, 100%);
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     display: grid;
     gap: var(--space-4);
     border: 1px solid var(--border);
@@ -615,6 +627,7 @@ textarea:focus-visible {
     padding: var(--space-6);
     background: var(--surface);
     box-shadow: var(--shadow);
+    overflow: hidden;
 }
 
 .dialog-actions {
@@ -832,6 +845,28 @@ textarea:focus-visible {
     --sample-accent: #4f88c6;
 }
 
+.creator-offer-section {
+    --sample-accent: var(--accent-strong);
+}
+
+.creator-offer-section .sample-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.creator-offer-card {
+    min-height: 18rem;
+}
+
+.creator-offer-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border);
+}
+
 .sample-category {
     color: var(--sample-accent, var(--accent));
     font-size: var(--font-sm);
@@ -941,6 +976,10 @@ textarea:focus-visible {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .creator-offer-section .sample-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .workflow-strip {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -977,6 +1016,7 @@ textarea:focus-visible {
     .hero-grid,
     .feature-grid,
     .sample-grid,
+    .creator-offer-section .sample-grid,
     .workflow-strip,
     .stats-grid {
         grid-template-columns: 1fr;
@@ -989,6 +1029,7 @@ textarea:focus-visible {
 
     .marketing-nav,
     .auth-public-bar,
+    .creator-offer-cta,
     .final-cta {
         align-items: flex-start;
         flex-direction: column;
@@ -1009,8 +1050,6 @@ textarea:focus-visible {
     }
 
     .dialog-panel {
-        max-height: calc(100vh - 2rem);
-        overflow: auto;
         padding: var(--space-4);
     }
 

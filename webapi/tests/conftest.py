@@ -82,6 +82,7 @@ def user_payload():
         "last_name": "Tester",
         "email": "pytest_user@example.com",
         "password": "pytest_password",
+        "preferred_language": "es",
     }
 
 
@@ -110,6 +111,7 @@ def auth_header(created_user):
 def created_prompt(db_session, created_user):
     prompt = Prompts(
         user_id=created_user.id,
+        title="Existing prompt",
         model_name=VALID_MODEL_NAME,
         prompt_text="existing prompt",
         category="qa",

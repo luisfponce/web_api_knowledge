@@ -38,9 +38,13 @@ export function PromptDetailDialog({
                 aria-labelledby="prompt-detail-title"
                 onMouseDown={(event) => event.stopPropagation()}
             >
-                <h2 id="prompt-detail-title">{t('prompts.detail.title')}</h2>
+                <h2 id="prompt-detail-title">{prompt.title}</h2>
                 <div className="prompt-detail-body">
                     <div className="prompt-detail-meta prompt-detail-summary">
+                        <div className="prompt-detail-field">
+                            <span className="label">{t('prompts.detail.titleLabel')}</span>
+                            <strong>{prompt.title}</strong>
+                        </div>
                         <div className="prompt-detail-field">
                             <span className="label">{t('prompts.detail.model')}</span>
                             <strong>{prompt.model_name}</strong>

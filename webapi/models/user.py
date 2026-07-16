@@ -11,6 +11,12 @@ class User(SQLModel, table=True):
     last_name: str = Field(max_length=100, index=True, nullable=False)
     email: EmailStr = Field(max_length=100, nullable=False)
     hashed_password: str = Field(max_length=255)  # Longer for bcrypt hashes
+    preferred_language: str = Field(
+        default="es",
+        max_length=2,
+        nullable=False,
+        sa_column_kwargs={"server_default": "es"},
+    )
     role: str = Field(
         default="user",
         max_length=20,

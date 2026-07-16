@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class PromptCreate(BaseModel):
     user_id: Optional[int] = None
+    title: str = Field(min_length=1, max_length=120)
     model_name: str = Field(min_length=1, max_length=MODEL_NAME_MAX_CHARS)
     prompt_text: str = Field(min_length=1, max_length=PROMPT_TEXT_MAX_CHARS)
     category: str
@@ -29,6 +30,8 @@ class PromptCreate(BaseModel):
 
 class PromptRead(BaseModel):
     id: int
+    user_id: int
+    title: str
     model_name: str
     prompt_text: str
     category: str

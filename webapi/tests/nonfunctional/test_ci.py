@@ -24,15 +24,15 @@ def test_register_user():
         "name": "user to test",
         "last_name": "my webapp",
         "email": "pytestmyapp@testing.com",
-        "password": TEST_PSW
+        "password": TEST_PSW,
+        "preferred_language": "es",
     })
     assert response.status_code in (200, 400)
     if response.status_code == 400:
         assert response.json().get("detail") == "username already taken"
     else:
-        assert response.json() == {
-            "message": "User created successfully"
-        }
+        assert response.json()["message"] == "User created successfully"
+        assert response.json()["token_type"] == "bearer"
 
 def get_token():
     response = client.post("/api/v1/auth/login", json={
@@ -49,6 +49,7 @@ def test_register_prompt():
     headers = {"Authorization": f"Bearer {token}", "send_email": "false"}
     response = client.post("/api/v1/prompts", json={
         "user_id": 1,
+        "title": "CI test prompt",
         "model_name": VALID_MODEL_NAME,
         "prompt_text": "Generate a test response",
         "category": "qa",

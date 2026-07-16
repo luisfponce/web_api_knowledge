@@ -225,10 +225,10 @@ export function AdminPromptsPage() {
                     {(promptsQuery.data ?? []).map((prompt) => (
                         <article key={prompt.id} className="list-item">
                             <div>
-                                <h3>{prompt.model_name}</h3>
+                                <h3>{prompt.title}</h3>
                                 <p>{prompt.prompt_text}</p>
                                 <p className="muted">
-                                    {t('admin.promptMeta', { userId: prompt.user_id, category: prompt.category, rating: prompt.rate })}
+                                    {t('admin.promptMeta', { userId: prompt.user_id, model: prompt.model_name, category: prompt.category, rating: prompt.rate })}
                                 </p>
                             </div>
                             {isGod ? (
