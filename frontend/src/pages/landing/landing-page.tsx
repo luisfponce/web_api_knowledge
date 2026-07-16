@@ -10,6 +10,14 @@ export function LandingPage() {
     const { t } = useTranslation()
     const benefits = t('landing.benefits', { returnObjects: true }) as Array<{ title: string; copy: string }>
     const workflow = t('landing.workflow', { returnObjects: true }) as string[]
+    const creatorOffers = t('landing.creatorOffers.cards', { returnObjects: true }) as Array<{
+        title: string
+        category: string
+        model: string
+        rating: string
+        outcome: string
+        locked: string
+    }>
 
     return (
         <main className="marketing-page">
@@ -75,6 +83,36 @@ export function LandingPage() {
                             </div>
                         </Card>
                     ))}
+                </div>
+            </section>
+
+            <section className="preview-section creator-offer-section" aria-labelledby="creator-offer-title">
+                <div className="section-heading preview-heading">
+                    <div>
+                        <p className="eyebrow">{t('landing.creatorOffers.eyebrow')}</p>
+                        <h2 id="creator-offer-title">{t('landing.creatorOffers.title')}</h2>
+                    </div>
+                    <p className="muted preview-copy">{t('landing.creatorOffers.copy')}</p>
+                </div>
+                <div className="sample-grid">
+                    {creatorOffers.map((offer) => (
+                        <Card key={offer.title} className="sample-card creator-offer-card">
+                            <div className="section-heading">
+                                <Badge tone="accent">{offer.model}</Badge>
+                                <span className="badge">{offer.rating}</span>
+                            </div>
+                            <div className="stack gap-tight">
+                                <p className="sample-category">{offer.category}</p>
+                                <h3>{offer.title}</h3>
+                                <p>{offer.outcome}</p>
+                                <p className="muted">{offer.locked}</p>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+                <div className="creator-offer-cta">
+                    <p className="muted">{t('landing.creatorOffers.included')}</p>
+                    <Link to="/register" className="button-link">{t('landing.creatorOffers.cta')}</Link>
                 </div>
             </section>
 

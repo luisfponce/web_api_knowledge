@@ -1,6 +1,6 @@
 export const en = {
     app: {
-        name: 'Prompt Catalog',
+        name: 'iPrompt',
         tagline: 'Personal library for prompts that work',
     },
     language: {
@@ -40,6 +40,39 @@ export const en = {
         previewEyebrow: 'Catalog preview',
         previewTitle: 'A warmer home for your reusable AI work',
         previewCopy: 'Preview how saved prompts can be organized with ratings, models, categories, and quick context before you commit them to your own library.',
+        creatorOffers: {
+            eyebrow: 'Free creator starter pack',
+            title: '3 creator-built prompts included with your free account.',
+            copy: 'Sign up and iPrompt seeds your catalog with three complete, editable prompts in your preferred language.',
+            included: 'Create a free account to unlock the full prompt bodies in your private catalog.',
+            cta: 'Create free account',
+            cards: [
+                {
+                    title: 'Appliance Value Expert',
+                    category: 'Finance & Investing',
+                    model: 'GPT',
+                    rating: '5/5',
+                    outcome: 'Compare appliance options in Mexico by price, warranty, ownership cost, reliability, and practical performance.',
+                    locked: 'Full quote workflow unlocks after signup.',
+                },
+                {
+                    title: 'Personal Meal Planning Expert',
+                    category: 'Personal Development',
+                    model: 'GPT',
+                    rating: '5/5',
+                    outcome: 'Plan realistic 30-day meals around budget, preferences, prep time, and safety-aware wellness context.',
+                    locked: 'Educational meal-planning prompt included after signup; not a replacement for clinical care.',
+                },
+                {
+                    title: 'Influencer Content Planner',
+                    category: 'Marketing & Sales',
+                    model: 'GPT',
+                    rating: '5/5',
+                    outcome: 'Build an editorial calendar with hooks, scripts, captions, repurposing ideas, and weekly metrics.',
+                    locked: 'Full two-step planning prompt unlocks in your catalog.',
+                },
+            ],
+        },
         benefitsLabel: 'Prompt library benefits',
         benefits: [
             {
@@ -103,6 +136,8 @@ export const en = {
         firstName: 'First name',
         lastName: 'Last name',
         email: 'Email',
+        preferredLanguage: 'Prompt language',
+        preferredLanguageHelp: 'Your starter prompts will be saved in this language. You can still switch the interface separately.',
         creating: 'Creating...',
         alreadyHaveAccount: 'Already have an account?',
         invalidCredentials: 'Invalid credentials',
@@ -153,6 +188,7 @@ export const en = {
             emptyRating: 'No ratings yet',
         },
         form: {
+            title: 'Title',
             model: 'Model',
             prompt: 'Prompt text',
             category: 'Category',
@@ -161,10 +197,12 @@ export const en = {
             update: 'Update prompt',
             knownModel: 'Select a known model from the list.',
             invalid: 'Invalid form data',
+            titlePlaceholder: 'Name this prompt so it is easy to find later.',
             promptPlaceholder: 'Paste the prompt that worked, including any constraints or context you want to reuse.',
         },
         detail: {
             title: 'Prompt details',
+            titleLabel: 'Title',
             model: 'Model',
             prompt: 'Prompt',
             category: 'Category',
@@ -190,7 +228,7 @@ export const en = {
         },
         editTitle: 'Edit prompt as god',
         allPrompts: 'All prompts',
-        promptMeta: 'User {{userId}} · {{category}} · Rating {{rating}}/5',
+        promptMeta: 'User {{userId}} · {{model}} · {{category}} · Rating {{rating}}/5',
         noPrompts: 'No prompts found.',
         deleteTitle: 'Delete this prompt?',
         deleteDescription: 'This removes the selected prompt from the catalog for every admin view.',

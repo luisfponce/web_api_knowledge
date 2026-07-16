@@ -11,6 +11,7 @@ export const registerSchema = z.object({
     email: z.string().email('Enter a valid email'),
     username: z.string().min(3, 'Username must be at least 3 characters'),
     password: z.string().min(6, 'Password must be at least 6 characters'),
+    preferred_language: z.enum(['es', 'en']),
 })
 
 export const recoveryRequestSchema = z.object({

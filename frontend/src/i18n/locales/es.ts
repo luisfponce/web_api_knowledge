@@ -1,6 +1,6 @@
 export const es = {
     app: {
-        name: 'Catálogo de Prompts',
+        name: 'iPrompt',
         tagline: 'Biblioteca personal para prompts que funcionan',
     },
     language: {
@@ -40,6 +40,39 @@ export const es = {
         previewEyebrow: 'Vista previa del catálogo',
         previewTitle: 'Un espacio más claro para tu trabajo reutilizable con IA',
         previewCopy: 'Mira cómo tus prompts guardados pueden organizarse con calificaciones, modelos, categorías y contexto útil antes de llevarlos a tu propia biblioteca.',
+        creatorOffers: {
+            eyebrow: 'Pack inicial gratis para creadores',
+            title: '3 prompts creados para creadores incluidos con tu cuenta gratis.',
+            copy: 'Regístrate e iPrompt agrega a tu catálogo tres prompts completos y editables en tu idioma preferido.',
+            included: 'Crea una cuenta gratis para desbloquear los prompts completos en tu catálogo privado.',
+            cta: 'Crear cuenta gratis',
+            cards: [
+                {
+                    title: 'Experto cotizador de electrodomesticos',
+                    category: 'Finanzas e inversión',
+                    model: 'GPT',
+                    rating: '5/5',
+                    outcome: 'Compara opciones de electrodomésticos en México por precio, garantía, costo de propiedad, confiabilidad y desempeño práctico.',
+                    locked: 'El flujo completo de cotización se desbloquea después del registro.',
+                },
+                {
+                    title: 'Experto nutriologo personal',
+                    category: 'Desarrollo personal',
+                    model: 'GPT',
+                    rating: '5/5',
+                    outcome: 'Planea comidas realistas por 30 días con presupuesto, preferencias, tiempo de preparación y contexto de bienestar con enfoque seguro.',
+                    locked: 'Prompt educativo de planeación incluido después del registro; no reemplaza atención clínica.',
+                },
+                {
+                    title: 'Planeador para influencer',
+                    category: 'Marketing y ventas',
+                    model: 'GPT',
+                    rating: '5/5',
+                    outcome: 'Crea calendario editorial con hooks, guiones, captions, ideas de reutilización y métricas semanales.',
+                    locked: 'El prompt completo de planeación en dos pasos se desbloquea en tu catálogo.',
+                },
+            ],
+        },
         benefitsLabel: 'Beneficios de la biblioteca de prompts',
         benefits: [
             {
@@ -103,6 +136,8 @@ export const es = {
         firstName: 'Nombre',
         lastName: 'Apellido',
         email: 'Correo electrónico',
+        preferredLanguage: 'Idioma de prompts',
+        preferredLanguageHelp: 'Tus prompts iniciales se guardarán en este idioma. La interfaz se puede cambiar por separado.',
         creating: 'Creando...',
         alreadyHaveAccount: '¿Ya tienes una cuenta?',
         invalidCredentials: 'Credenciales inválidas',
@@ -153,6 +188,7 @@ export const es = {
             emptyRating: 'Sin calificaciones aún',
         },
         form: {
+            title: 'Título',
             model: 'Modelo',
             prompt: 'Texto del prompt',
             category: 'Categoría',
@@ -161,10 +197,12 @@ export const es = {
             update: 'Actualizar prompt',
             knownModel: 'Selecciona un modelo conocido de la lista.',
             invalid: 'Datos del formulario inválidos',
+            titlePlaceholder: 'Nombra este prompt para encontrarlo fácil después.',
             promptPlaceholder: 'Pega el prompt que funcionó, incluyendo restricciones o contexto que quieras reutilizar.',
         },
         detail: {
             title: 'Detalles del prompt',
+            titleLabel: 'Título',
             model: 'Modelo',
             prompt: 'Prompt',
             category: 'Categoría',
@@ -190,7 +228,7 @@ export const es = {
         },
         editTitle: 'Editar prompt como god',
         allPrompts: 'Todos los prompts',
-        promptMeta: 'Usuario {{userId}} · {{category}} · Calificación {{rating}}/5',
+        promptMeta: 'Usuario {{userId}} · {{model}} · {{category}} · Calificación {{rating}}/5',
         noPrompts: 'No se encontraron prompts.',
         deleteTitle: '¿Eliminar este prompt?',
         deleteDescription: 'Esto elimina el prompt seleccionado del catálogo para toda vista de administración.',

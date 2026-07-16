@@ -5,6 +5,7 @@ import type { PromptInput, PromptRecord } from '../../features/prompts/prompts-t
 import { promptSchema } from '../../lib/validation/prompt-schemas'
 import { Button } from '../ui/button'
 import { ComboboxInput } from '../ui/combobox-input'
+import { Input } from '../ui/input'
 import { RatingInput } from '../ui/rating-input'
 import { Select } from '../ui/select'
 import { Textarea } from '../ui/textarea'
@@ -32,6 +33,7 @@ export function PromptForm({
 }: PromptFormProps) {
     const { t } = useTranslation()
     const [form, setForm] = useState<PromptInput>({
+        title: initialValue?.title ?? '',
         model_name: initialValue?.model_name ?? '',
         prompt_text: initialValue?.prompt_text ?? '',
         category: initialValue?.category ?? '',
@@ -74,12 +76,20 @@ export function PromptForm({
         setFieldErrors({})
         await onSubmit(parsed.data)
         if (!isEdit) {
-            setForm({ model_name: '', prompt_text: '', category: '', rate: 3 })
+            setForm({ title: '', model_name: '', prompt_text: '', category: '', rate: 3 })
         }
     }
 
     return (
         <form className="prompt-form" onSubmit={handleSubmit}>
+            <Input
+                label={t('prompts.form.title')}
+                value={form.title}
+                onChange={(e) => handleChange('title', e.target.value)}
+                error={fieldErrors.title}
+                placeholder={t('prompts.form.titlePlaceholder')}
+                maxLength={120}
+            />
             <ComboboxInput
                 label={t('prompts.form.model')}
                 options={modelOptions}

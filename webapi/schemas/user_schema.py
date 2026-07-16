@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Literal
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from .prompt_schema import PromptRead
 
@@ -13,6 +13,7 @@ class UserCreate(BaseModel):
                 "last_name": "testing",
                 "email": "user@example.com",
                 "password": "usertest",
+                "preferred_language": "es",
             }
         },
     )
@@ -22,6 +23,7 @@ class UserCreate(BaseModel):
     last_name: str = Field(max_length=100)
     email: EmailStr = Field(max_length=100)
     password: str = Field(max_length=255)
+    preferred_language: Literal["es", "en"] = "es"
 
 
 class UserRead(BaseModel):
@@ -32,6 +34,7 @@ class UserRead(BaseModel):
     name: str
     last_name: str
     email: str
+    preferred_language: str
     role: str
 
 class UserReadWithPrompts(BaseModel):
@@ -42,5 +45,6 @@ class UserReadWithPrompts(BaseModel):
     name: str
     last_name: str
     email: str
+    preferred_language: str
     role: str
     prompts: List[PromptRead] = []

@@ -6,17 +6,30 @@ import { Card } from '../../components/ui/card'
 import { LanguageSwitcher } from '../../components/i18n/language-switcher'
 import { InlineError } from '../../components/ui/inline-error'
 import { Input } from '../../components/ui/input'
+import { Select } from '../../components/ui/select'
 import { ThemeToggle } from '../../components/ui/theme-toggle'
-import { signup } from '../../features/auth/auth-service'
+import { useAuth } from '../../features/auth/auth-store'
 import { ApiError } from '../../lib/http/api-error'
 import { registerSchema } from '../../lib/validation/auth-schemas'
 
 export function RegisterPage() {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const navigate = useNavigate()
-    const [form, setForm] = useState({ name: '', last_name: '', email: '', username: '', password: '' })
+    const { signup } = useAuth()
+    const [form, setForm] = useState({
+        name: '',
+        last_name: '',
+        email: '',
+        username: '',
+        password: '',
+        preferred_language: i18n.resolvedLanguage === 'en' ? 'en' : 'es',
+    })
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
+    const languageOptions = [
+        { value: 'es', label: t('language.spanish') },
+        { value: 'en', label: t('language.english') },
+    ]
 
     const updateField = (field: keyof typeof form, value: string) => {
         setForm((current) => ({ ...current, [field]: value }))
@@ -34,7 +47,7 @@ export function RegisterPage() {
             setLoading(true)
             setError(null)
             await signup(parsed.data)
-            navigate('/login?registered=1', { replace: true })
+            navigate('/app/prompts', { replace: true })
         } catch (err) {
             const message = err instanceof Error ? err.message : t('auth.unableToCreate')
             setError(err instanceof ApiError && err.status === 400 ? t('auth.usernameTaken') : message)
@@ -67,6 +80,13 @@ export function RegisterPage() {
                         <Input label={t('auth.email')} value={form.email} onChange={(event) => updateField('email', event.target.value)} autoComplete="email" />
                         <Input label={t('auth.username')} value={form.username} onChange={(event) => updateField('username', event.target.value)} autoComplete="username" />
                         <Input label={t('auth.password')} type="password" value={form.password} onChange={(event) => updateField('password', event.target.value)} autoComplete="new-password" />
+                        <Select
+                            label={t('auth.preferredLanguage')}
+                            options={languageOptions}
+                            value={form.preferred_language}
+                            onChange={(event) => updateField('preferred_language', event.target.value)}
+                        />
+                        <p className="muted form-helper">{t('auth.preferredLanguageHelp')}</p>
                         {error ? <InlineError message={error} /> : null}
                         <Button type="submit" disabled={loading}>{loading ? t('auth.creating') : t('nav.createAccount')}</Button>
                         <Link className="text-link" to="/login">{t('auth.alreadyHaveAccount')}</Link>

@@ -17,6 +17,7 @@ export type SessionResolved = {
     username: string
     userId: number
     role: UserRole
+    preferredLanguage: UserRecord['preferred_language']
 }
 
 export async function loginAndResolveUserId(
@@ -34,6 +35,7 @@ export async function loginAndResolveUserId(
         username: currentUser.username,
         userId: currentUser.id,
         role: currentUser.role,
+        preferredLanguage: currentUser.preferred_language,
     }
 }
 
@@ -42,6 +44,20 @@ export function signup(input: RegisterInput): Promise<SignupResponse> {
         method: 'POST',
         body: JSON.stringify(input),
     })
+}
+
+export async function signupAndResolveSession(
+    input: RegisterInput,
+): Promise<SessionResolved> {
+    const response = await signup(input)
+
+    return {
+        token: response.access_token,
+        username: response.user.username,
+        userId: response.user.id,
+        role: response.user.role,
+        preferredLanguage: response.user.preferred_language,
+    }
 }
 
 export function getCurrentUser(token: string): Promise<UserRecord> {
