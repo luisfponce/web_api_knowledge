@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PromptEditorDrawer, type PromptEditorState } from '../../components/prompts/prompt-editor-drawer'
+import { PromptList } from '../../components/prompts/prompt-list'
+import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { ConfirmDialog } from '../../components/ui/confirm-dialog'
 import { InlineError } from '../../components/ui/inline-error'
 import { PageHeader } from '../../components/ui/page-header'
-import { PromptForm } from '../../components/prompts/prompt-form'
-import { PromptList } from '../../components/prompts/prompt-list'
 import { useAuth } from '../../features/auth/auth-store'
 import {
     listCategoryOptions,
@@ -27,7 +28,7 @@ export function PromptsPage() {
     const { t } = useTranslation()
     const { session } = useAuth()
     const queryClient = useQueryClient()
-    const [editingPrompt, setEditingPrompt] = useState<PromptRecord | null>(null)
+    const [editorState, setEditorState] = useState<PromptEditorState>(null)
     const [promptToDelete, setPromptToDelete] = useState<PromptRecord | null>(null)
     const [error, setError] = useState<string | null>(null)
 
@@ -76,6 +77,7 @@ export function PromptsPage() {
         },
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ['prompts', userId] })
+            setEditorState(null)
             setError(null)
         },
         onError: (err) => {
@@ -85,14 +87,14 @@ export function PromptsPage() {
 
     const updateMutation = useMutation({
         mutationFn: async (value: PromptInput) => {
-            if (!token || userId === null || !editingPrompt) {
+            if (!token || userId === null || editorState?.mode !== 'edit') {
                 throw new Error(t('prompts.errors.selectedUnavailable'))
             }
-            return updatePrompt(token, editingPrompt.id, userId, value)
+            return updatePrompt(token, editorState.prompt.id, userId, value)
         },
         onSuccess: async () => {
             await queryClient.invalidateQueries({ queryKey: ['prompts', userId] })
-            setEditingPrompt(null)
+            setEditorState(null)
             setError(null)
         },
         onError: (err) => {
@@ -117,7 +119,7 @@ export function PromptsPage() {
     })
 
     const handleSubmit = async (value: PromptInput) => {
-        if (editingPrompt) {
+        if (editorState?.mode === 'edit') {
             await updateMutation.mutateAsync(value)
             return
         }
@@ -132,11 +134,27 @@ export function PromptsPage() {
         })
     }
 
+    const openCreateDrawer = () => {
+        setError(null)
+        setEditorState({ mode: 'create' })
+    }
+
+    const openEditDrawer = (prompt: PromptRecord) => {
+        setError(null)
+        setEditorState({ mode: 'edit', prompt })
+    }
+
+    const closeEditorDrawer = () => {
+        setEditorState(null)
+    }
+
     const prompts = promptsQuery.data ?? []
     const averageRating = prompts.length
         ? prompts.reduce((total, prompt) => total + prompt.rate, 0) / prompts.length
         : 0
     const categoryCount = new Set(prompts.map((prompt) => prompt.category)).size
+    const optionErrorMessage = categoriesQuery.error || modelsQuery.error ? t('prompts.dropdownError') : null
+    const drawerErrorMessage = error ?? optionErrorMessage
 
     return (
         <section className="stack">
@@ -144,6 +162,11 @@ export function PromptsPage() {
                 eyebrow={t('prompts.eyebrow')}
                 title={t('prompts.title')}
                 description={t('prompts.description')}
+                actions={(
+                    <Button type="button" onClick={openCreateDrawer}>
+                        {t('prompts.newPrompt')}
+                    </Button>
+                )}
             />
 
             <div className="stats-grid">
@@ -161,23 +184,6 @@ export function PromptsPage() {
                 </Card>
             </div>
 
-            <Card className="composer-card">
-                <h1>{editingPrompt ? t('prompts.edit') : t('prompts.create')}</h1>
-                <PromptForm
-                    key={editingPrompt?.id ?? 'new-prompt'}
-                    initialValue={editingPrompt}
-                    isSaving={createMutation.isPending || updateMutation.isPending}
-                    modelOptions={modelsQuery.data?.items ?? []}
-                    categoryOptions={categoriesQuery.data?.items ?? []}
-                    optionsLoading={categoriesQuery.isLoading || modelsQuery.isLoading}
-                    onSubmit={handleSubmit}
-                    onCancelEdit={() => setEditingPrompt(null)}
-                />
-                {categoriesQuery.error || modelsQuery.error ? (
-                    <InlineError message={t('prompts.dropdownError')} />
-                ) : null}
-            </Card>
-
             <Card className="library-card">
                 <div className="section-heading">
                     <div>
@@ -186,15 +192,26 @@ export function PromptsPage() {
                     </div>
                 </div>
                 {promptsQuery.isLoading ? <p className="muted">{t('common.loading')}</p> : null}
-                {error ? <InlineError message={error} /> : null}
+                {error && !editorState ? <InlineError message={error} /> : null}
+                {optionErrorMessage && !editorState ? <InlineError message={optionErrorMessage} /> : null}
                 {promptsQuery.data ? (
                     <PromptList
                         prompts={prompts}
-                        onEdit={setEditingPrompt}
+                        onEdit={openEditDrawer}
                         onDelete={setPromptToDelete}
                     />
                 ) : null}
             </Card>
+            <PromptEditorDrawer
+                state={editorState}
+                isSaving={createMutation.isPending || updateMutation.isPending}
+                errorMessage={drawerErrorMessage}
+                modelOptions={modelsQuery.data?.items ?? []}
+                categoryOptions={categoriesQuery.data?.items ?? []}
+                optionsLoading={categoriesQuery.isLoading || modelsQuery.isLoading}
+                onSubmit={handleSubmit}
+                onClose={closeEditorDrawer}
+            />
             <ConfirmDialog
                 open={Boolean(promptToDelete)}
                 title={t('prompts.deleteTitle')}

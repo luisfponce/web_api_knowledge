@@ -172,6 +172,7 @@ export const en = {
         description: 'Save the prompts that worked, then find and reuse them faster.',
         edit: 'Edit prompt',
         create: 'Save a proven prompt',
+        newPrompt: 'New Prompt',
         listTitle: 'Saved prompts',
         listDescription: 'Open any card to review model, category, rating, and full prompt text.',
         dropdownError: 'Unable to load dropdown options',
