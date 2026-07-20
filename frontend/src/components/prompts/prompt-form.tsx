@@ -16,6 +16,7 @@ type PromptFormProps = {
     modelOptions: SelectOption[]
     categoryOptions: SelectOption[]
     optionsLoading: boolean
+    showCancel?: boolean
     onSubmit: (value: PromptInput) => Promise<void>
     onCancelEdit: () => void
 }
@@ -28,6 +29,7 @@ export function PromptForm({
     modelOptions,
     categoryOptions,
     optionsLoading,
+    showCancel = false,
     onSubmit,
     onCancelEdit,
 }: PromptFormProps) {
@@ -129,7 +131,7 @@ export function PromptForm({
                 <Button type="submit" disabled={optionsLoading || isSaving}>
                     {isSaving ? t('common.saving') : isEdit ? t('prompts.form.update') : t('prompts.form.add')}
                 </Button>
-                {isEdit ? (
+                {isEdit || showCancel ? (
                     <Button type="button" variant="ghost" onClick={onCancelEdit}>
                         {t('common.cancel')}
                     </Button>

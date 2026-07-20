@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { promptSchema } from './prompt-schemas'
 
 const validPrompt = {
+    title: 'Answer generator',
     model_name: 'gpt',
     prompt_text: 'Generate answer',
     category: 'qa',

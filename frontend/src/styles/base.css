@@ -637,6 +637,47 @@ textarea:focus-visible {
     flex-wrap: wrap;
 }
 
+.drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    justify-content: flex-end;
+    background: rgb(18 12 8 / 0.62);
+    backdrop-filter: blur(6px);
+}
+
+.drawer-panel {
+    width: min(640px, 100vw);
+    height: 100vh;
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--space-4);
+    border-left: 1px solid var(--border);
+    padding: var(--space-6);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.drawer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+}
+
+.drawer-body {
+    min-height: 0;
+    display: grid;
+    align-content: start;
+    gap: var(--space-4);
+    overflow: auto;
+    padding-right: var(--space-1);
+    scrollbar-gutter: stable;
+}
+
 .marketing-page {
     width: min(1180px, calc(100% - 2rem));
     margin: 0 auto;
@@ -965,7 +1006,6 @@ textarea:focus-visible {
     line-height: 1.1;
 }
 
-.composer-card,
 .library-card {
     display: grid;
     gap: var(--space-4);
@@ -1050,6 +1090,12 @@ textarea:focus-visible {
     }
 
     .dialog-panel {
+        padding: var(--space-4);
+    }
+
+    .drawer-panel {
+        width: 100%;
+        border-left: 0;
         padding: var(--space-4);
     }
 

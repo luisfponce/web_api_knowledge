@@ -172,6 +172,7 @@ export const es = {
         description: 'Guarda los prompts que funcionaron, luego encuéntralos y reutilízalos más rápido.',
         edit: 'Editar prompt',
         create: 'Guardar un prompt probado',
+        newPrompt: 'Nuevo prompt',
         listTitle: 'Prompts guardados',
         listDescription: 'Abre cualquier tarjeta para revisar modelo, categoría, calificación y texto completo del prompt.',
         dropdownError: 'No se pudieron cargar las opciones desplegables',
