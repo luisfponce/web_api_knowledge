@@ -28,3 +28,6 @@ Caddyfile
 # Local runtime logs
 backend.log
 frontend.log
+
+# Local MariaDB backups
+mariadb_backup_folder/
