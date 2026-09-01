@@ -53,8 +53,7 @@ jobs:
         ENV_MAIL_PASSWORD: ${{ secrets.ENV_MAIL_PASSWORD }}
         ENV_SECRET_KEY: ${{ secrets.ENV_SECRET_KEY }}
       run: |
-        cd webapi
-        pytest tests/test_ci.py -v
+        pytest webapi/tests/test_ci.py -vv -ra
 
   frontend-build:
     name: Frontend Lint & Build
