@@ -46,3 +46,16 @@ REDIS_DECODE_RESP = True
 DB_URL = os.getenv("DB_URL")
 if not DB_URL:
     DB_URL = "sqlite:///./crud_data.db"  # Default to SQLite if no environment variable is set
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# Slack notification configuration
+SLACK_NOTIFICATIONS_ENABLED = _env_bool("SLACK_NOTIFICATIONS_ENABLED", False)
+SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
+SLACK_NOTIFICATION_TIMEOUT_SECONDS = float(os.getenv("SLACK_NOTIFICATION_TIMEOUT_SECONDS", "5"))

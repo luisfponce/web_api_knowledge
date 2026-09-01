@@ -385,6 +385,7 @@ SELECT id, user_id, model_name, category, rate FROM prompts;
 - JWT and mail settings are read in [`core/config.py`](core/config.py).
 - `ENV_MAIL_USERNAME`, `ENV_MAIL_PASSWORD`, `ENV_MAIL_FROM`, and `ENV_SECRET_KEY` should come from local `.env`, shell exports, CI secrets, or production secret management. Do not commit real values.
 - Redis is configured through `REDIS_HOST`, `REDIS_PORT`, and optional `REDIS_PSW` in [`core/config.py`](core/config.py). Local defaults are `127.0.0.1:6379`; Compose sets `REDIS_HOST=redis` for backend containers.
+- Slack notifications are configured with `SLACK_NOTIFICATIONS_ENABLED`, `SLACK_WEBHOOK_URL`, and `SLACK_NOTIFICATION_TIMEOUT_SECONDS`. See the administrator setup guide at [`../docs/slack-notifications-admin-guide.md`](../docs/slack-notifications-admin-guide.md).
 - The backend Docker image includes a deterministic `fastapi_mail/config.py` dependency patch after installing pinned requirements.
 
 Scalable configuration approach:

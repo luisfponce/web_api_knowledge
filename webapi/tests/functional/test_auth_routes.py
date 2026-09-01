@@ -9,7 +9,22 @@ import api.endpoints.v1.auths as auths_module
 from auth.auth_service import validar_jwt_raw
 
 
-def test_signup_success(client, user_payload, db_session):
+def test_signup_success(client, user_payload, db_session, monkeypatch):
+    notifications = []
+
+    async def fake_notify_user_created(user):
+        notifications.append(
+            {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "preferred_language": user.preferred_language,
+                "role": user.role,
+            }
+        )
+
+    monkeypatch.setattr(auths_module, "notify_user_created", fake_notify_user_created)
+
     response = client.post("/api/v1/auth/signup", json=user_payload)
 
     assert response.status_code == 200
@@ -37,6 +52,15 @@ def test_signup_success(client, user_payload, db_session):
     }
     assert {prompt.model_name for prompt in seeded_prompts} == {"gpt"}
     assert {prompt.rate for prompt in seeded_prompts} == {5}
+    assert notifications == [
+        {
+            "id": created.id,
+            "username": user_payload["username"],
+            "email": user_payload["email"],
+            "preferred_language": "es",
+            "role": "user",
+        }
+    ]
 
 
 def test_signup_rejects_client_supplied_id(client, user_payload, db_session):

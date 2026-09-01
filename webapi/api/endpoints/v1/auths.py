@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Body, Query
+from fastapi import APIRouter, HTTPException, Depends, Body, Query, BackgroundTasks
 from sqlmodel import Session, select
 from models.user import User
 from models.prompts import Prompts
@@ -17,6 +17,8 @@ from db.redis_connection import get_redis
 from pydantic import BaseModel, Field
 from schemas.login_schema import LoginRequest
 from schemas.user_schema import UserCreate, UserRead
+from infrastructure.notifications.events import notify_user_created
+from infrastructure.notifications.scheduler import schedule_notification
 
 router = APIRouter()
 
@@ -31,7 +33,11 @@ class RecoveryRedeemRequest(BaseModel):
 
 
 @router.post("/signup")
-def signup(payload: UserCreate, session: Session = Depends(get_session)):
+def signup(
+    payload: UserCreate,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
     statement = select(User).where(User.username == payload.username)
     result = session.exec(statement)
     user_exists = result.one_or_none()
@@ -63,6 +69,7 @@ def signup(payload: UserCreate, session: Session = Depends(get_session)):
 
     session.commit()
     session.refresh(user)
+    schedule_notification(background_tasks, lambda: notify_user_created(user))
     access_token = crear_jwt(
         data={"sub": user.username, "user_id": user.id, "role": user.role}
     )
