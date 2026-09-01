@@ -51,7 +51,24 @@ def create_prompt(
     return prompt
 
 
-def test_create_prompt_success(client, auth_header, created_user):
+def test_create_prompt_success(client, auth_header, created_user, monkeypatch):
+    notifications = []
+
+    async def fake_notify_prompt_created(prompt, user):
+        notifications.append(
+            {
+                "prompt_id": prompt.id,
+                "owner_id": user.id,
+                "owner_username": user.username,
+                "title": prompt.title,
+                "model_name": prompt.model_name,
+                "category": prompt.category,
+                "rate": prompt.rate,
+            }
+        )
+
+    monkeypatch.setattr(prompts_module, "notify_prompt_created", fake_notify_prompt_created)
+
     payload = {
         "user_id": created_user.id,
         "title": "Answer generator",
@@ -67,6 +84,17 @@ def test_create_prompt_success(client, auth_header, created_user):
     assert response.json()["user_id"] == created_user.id
     assert response.json()["title"] == "Answer generator"
     assert response.json()["model_name"] == VALID_MODEL_NAME
+    assert notifications == [
+        {
+            "prompt_id": response.json()["id"],
+            "owner_id": created_user.id,
+            "owner_username": created_user.username,
+            "title": "Answer generator",
+            "model_name": VALID_MODEL_NAME,
+            "category": "qa",
+            "rate": 5,
+        }
+    ]
 
 
 def test_create_prompt_accepts_prompt_text_longer_than_150_chars(client, auth_header, created_user):
@@ -217,6 +245,27 @@ def test_create_prompt_send_email_exception_still_success(client, auth_header, c
 
     assert response.status_code == 200
     assert response.json()["prompt_text"] == "Ignore email failure"
+
+
+def test_create_prompt_notification_exception_still_success(client, auth_header, created_user, monkeypatch):
+    async def failing_notify_prompt_created(*args, **kwargs):
+        raise Exception("slack unavailable")
+
+    monkeypatch.setattr(prompts_module, "notify_prompt_created", failing_notify_prompt_created)
+
+    payload = {
+        "user_id": created_user.id,
+        "title": "Slack resilient prompt",
+        "model_name": VALID_MODEL_NAME,
+        "prompt_text": "Ignore Slack failure",
+        "category": "ops",
+        "rate": 1,
+    }
+
+    response = client.post("/api/v1/prompts", json=payload, headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Slack resilient prompt"
 
 
 def test_read_prompts_success(client, auth_header, created_prompt):

@@ -36,6 +36,9 @@ services:
       ENV_MAIL_PASSWORD: ${ENV_MAIL_PASSWORD:-replace_with_local_mail_app_password}
       ENV_MAIL_FROM: ${ENV_MAIL_FROM:-test@example.com}
       ENV_SECRET_KEY: ${ENV_SECRET_KEY:-replace_with_local_jwt_secret}
+      SLACK_NOTIFICATIONS_ENABLED: ${SLACK_NOTIFICATIONS_ENABLED:-false}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      SLACK_NOTIFICATION_TIMEOUT_SECONDS: ${SLACK_NOTIFICATION_TIMEOUT_SECONDS:-5}
     expose:
       - "8000"
     depends_on:

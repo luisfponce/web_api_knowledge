@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, BackgroundTasks
 from sqlmodel import Session, select
 from typing import Optional
 from models.user import User
@@ -6,6 +6,8 @@ from models.prompts import Prompts
 from db.db_connection import get_session
 from auth.auth_service import get_current_db_user
 from infrastructure.email.smtp_service import send_email
+from infrastructure.notifications.events import notify_prompt_created
+from infrastructure.notifications.scheduler import schedule_notification
 from schemas.prompt_schema import PromptCreate
 
 router = APIRouter()
@@ -13,6 +15,7 @@ router = APIRouter()
 @router.post("", response_model=Prompts)
 async def create_prompt(
     prompt: PromptCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_db_user),
     send_email_header: Optional[str] = Header("false", alias="send_email")
@@ -36,6 +39,7 @@ async def create_prompt(
     session.add(created_prompt)
     session.commit()
     session.refresh(created_prompt)
+    schedule_notification(background_tasks, lambda: notify_prompt_created(created_prompt, prompt_user))
 
     # Email notification is best-effort and should not block prompt persistence.
     if str(send_email_header).lower() == "true":
