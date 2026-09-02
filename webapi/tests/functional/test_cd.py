@@ -4,6 +4,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 
 def test_login_and_access_private(client):
+    password = "pytest_password"
     # Ensure user exists; tolerate pre-existing data in local DB runs
     signup_response = client.post(
         "/api/v1/auth/signup",
@@ -12,7 +13,7 @@ def test_login_and_access_private(client):
             "name": "Py",
             "last_name": "Tester",
             "email": "pytest@example.com",
-            "password": "pytest",
+            "password": password,
         },
     )
     assert signup_response.status_code in (200, 400)
@@ -24,7 +25,7 @@ def test_login_and_access_private(client):
         "/api/v1/auth/login",
         json={
             "username": "pytest",
-            "password": "pytest",
+            "password": password,
         },
     )
     assert response.status_code == 200

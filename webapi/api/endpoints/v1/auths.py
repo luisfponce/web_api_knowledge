@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends, Body, Query, BackgroundTa
 from sqlmodel import Session, select
 from models.user import User
 from models.prompts import Prompts
-from passlib.hash import sha256_crypt
 from db.db_connection import get_session
 from auth.auth_service import authenticate_user, crear_jwt, get_current_user, get_current_db_user
+from auth.password_service import hash_password
 from core.creator_prompts import get_creator_prompt_seeds
 from infrastructure.email.smtp_service import send_email
 import secrets
@@ -48,7 +48,7 @@ def signup(
         name=payload.name,
         last_name=payload.last_name,
         email=payload.email,
-        hashed_password=sha256_crypt.hash(payload.password),
+        hashed_password=hash_password(payload.password),
         preferred_language=payload.preferred_language,
         role="user",
     )
@@ -151,7 +151,7 @@ async def generate_password(
         raise HTTPException(status_code=400, detail="Key already exists")
     """Generate and store a temporary password"""
     password = secrets.token_urlsafe(16)
-    user.hashed_password = sha256_crypt.hash(password)
+    user.hashed_password = hash_password(password)
     session.add(user)
     session.commit()
     session.refresh(user)

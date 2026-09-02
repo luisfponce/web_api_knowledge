@@ -1,5 +1,10 @@
 from typing import List, Literal
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from core.password_policy import (
+    PASSWORD_MAX_LENGTH,
+    PASSWORD_MIN_LENGTH,
+    validate_password_strength,
+)
 from .prompt_schema import PromptRead
 
 
@@ -12,7 +17,7 @@ class UserCreate(BaseModel):
                 "name": "user",
                 "last_name": "testing",
                 "email": "user@example.com",
-                "password": "usertest",
+                "password": "correct-horse-demo",
                 "preferred_language": "es",
             }
         },
@@ -22,8 +27,13 @@ class UserCreate(BaseModel):
     name: str = Field(max_length=100)
     last_name: str = Field(max_length=100)
     email: EmailStr = Field(max_length=100)
-    password: str = Field(max_length=255)
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
     preferred_language: Literal["es", "en"] = "es"
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, password: str) -> str:
+        return validate_password_strength(password)
 
 
 class UserRead(BaseModel):

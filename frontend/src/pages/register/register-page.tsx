@@ -10,7 +10,7 @@ import { Select } from '../../components/ui/select'
 import { ThemeToggle } from '../../components/ui/theme-toggle'
 import { useAuth } from '../../features/auth/auth-store'
 import { ApiError } from '../../lib/http/api-error'
-import { registerSchema } from '../../lib/validation/auth-schemas'
+import { PASSWORD_MIN_LENGTH, isCommonPassword, registerSchema } from '../../lib/validation/auth-schemas'
 
 export function RegisterPage() {
     const { t, i18n } = useTranslation()
@@ -22,6 +22,7 @@ export function RegisterPage() {
         email: '',
         username: '',
         password: '',
+        confirmPassword: '',
         preferred_language: i18n.resolvedLanguage === 'en' ? 'en' : 'es',
     })
     const [error, setError] = useState<string | null>(null)
@@ -35,6 +36,13 @@ export function RegisterPage() {
         setForm((current) => ({ ...current, [field]: value }))
     }
 
+    const passwordLengthMet = form.password.length >= PASSWORD_MIN_LENGTH
+    const commonPasswordMet = form.password.length > 0 && !isCommonPassword(form.password)
+    const passwordsMatch = form.confirmPassword.length > 0 && form.password === form.confirmPassword
+    const passwordRequirementsMet = passwordLengthMet && commonPasswordMet && passwordsMatch
+
+    const requirementClass = (isMet: boolean) => (isMet ? 'requirement-met' : 'requirement-unmet')
+
     const onSubmit = async (event: FormEvent) => {
         event.preventDefault()
         const parsed = registerSchema.safeParse(form)
@@ -46,7 +54,14 @@ export function RegisterPage() {
         try {
             setLoading(true)
             setError(null)
-            await signup(parsed.data)
+            await signup({
+                name: parsed.data.name,
+                last_name: parsed.data.last_name,
+                email: parsed.data.email,
+                username: parsed.data.username,
+                password: parsed.data.password,
+                preferred_language: parsed.data.preferred_language,
+            })
             navigate('/app/prompts', { replace: true })
         } catch (err) {
             const message = err instanceof Error ? err.message : t('auth.unableToCreate')
@@ -80,6 +95,17 @@ export function RegisterPage() {
                         <Input label={t('auth.email')} value={form.email} onChange={(event) => updateField('email', event.target.value)} autoComplete="email" />
                         <Input label={t('auth.username')} value={form.username} onChange={(event) => updateField('username', event.target.value)} autoComplete="username" />
                         <Input label={t('auth.password')} type="password" value={form.password} onChange={(event) => updateField('password', event.target.value)} autoComplete="new-password" />
+                        <Input label={t('auth.confirmPassword')} type="password" value={form.confirmPassword} onChange={(event) => updateField('confirmPassword', event.target.value)} autoComplete="new-password" />
+                        <div className="password-requirements" aria-live="polite">
+                            <p className="muted form-helper">{t('auth.passwordRequirements')}</p>
+                            <ul>
+                                <li className={requirementClass(passwordLengthMet)}>{t('auth.passwordMinLength')}</li>
+                                <li className={requirementClass(commonPasswordMet)}>{t('auth.passwordAvoidCommon')}</li>
+                                {form.confirmPassword.length > 0 ? (
+                                    <li className={requirementClass(passwordsMatch)}>{t('auth.passwordsMatch')}</li>
+                                ) : null}
+                            </ul>
+                        </div>
                         <Select
                             label={t('auth.preferredLanguage')}
                             options={languageOptions}
@@ -88,7 +114,7 @@ export function RegisterPage() {
                         />
                         <p className="muted form-helper">{t('auth.preferredLanguageHelp')}</p>
                         {error ? <InlineError message={error} /> : null}
-                        <Button type="submit" disabled={loading}>{loading ? t('auth.creating') : t('nav.createAccount')}</Button>
+                        <Button type="submit" disabled={loading || !passwordRequirementsMet}>{loading ? t('auth.creating') : t('nav.createAccount')}</Button>
                         <Link className="text-link" to="/login">{t('auth.alreadyHaveAccount')}</Link>
                         <Link className="text-link" to="/">{t('auth.backToLanding')}</Link>
                     </form>

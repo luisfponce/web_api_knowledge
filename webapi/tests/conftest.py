@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from main import myapp
+from auth.password_service import hash_password
 from db.db_connection import get_session
 from db.redis_connection import get_redis
 from auth.auth_service import crear_jwt
@@ -93,7 +94,7 @@ def created_user(db_session):
         name="Base",
         last_name="User",
         email="base_user@example.com",
-        hashed_password="base_password",
+        hashed_password=hash_password("base_password"),
     )
     db_session.add(user)
     db_session.commit()

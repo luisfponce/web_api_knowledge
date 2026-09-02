@@ -7,6 +7,7 @@ from models.user import User
 from models.prompts import Prompts
 import api.endpoints.v1.auths as auths_module
 from auth.auth_service import validar_jwt_raw
+from auth.password_service import hash_password, verify_password
 
 
 def test_signup_success(client, user_payload, db_session, monkeypatch):
@@ -41,7 +42,8 @@ def test_signup_success(client, user_payload, db_session, monkeypatch):
     assert created.role == "user"
     assert created.preferred_language == "es"
     assert created.hashed_password != user_payload["password"]
-    assert sha256_crypt.verify(user_payload["password"], created.hashed_password)
+    assert created.hashed_password.startswith("$argon2id$")
+    assert verify_password(user_payload["password"], created.hashed_password)
 
     seeded_prompts = db_session.exec(select(Prompts).where(Prompts.user_id == created.id)).all()
     assert len(seeded_prompts) == 3
@@ -80,6 +82,28 @@ def test_signup_rejects_client_supplied_hashed_password(client, user_payload, db
     assert created is None
 
 
+def test_signup_rejects_short_password(client, user_payload, db_session):
+    response = client.post(
+        "/api/v1/auth/signup",
+        json={**user_payload, "password": "short"},
+    )
+
+    assert response.status_code == 422
+    created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
+    assert created is None
+
+
+def test_signup_rejects_common_password(client, user_payload, db_session):
+    response = client.post(
+        "/api/v1/auth/signup",
+        json={**user_payload, "password": "password1234"},
+    )
+
+    assert response.status_code == 422
+    created = db_session.exec(select(User).where(User.username == user_payload["username"])).first()
+    assert created is None
+
+
 def test_signup_openapi_schema_does_not_expose_storage_fields(client):
     response = client.get("/openapi.json")
 
@@ -110,7 +134,7 @@ def test_signup_duplicate_username_returns_400(client, db_session):
             name="dup",
             last_name="user",
             email="dup_user@example.com",
-            hashed_password=sha256_crypt.hash("password"),
+            hashed_password=hash_password("existing_password"),
         )
     )
     db_session.commit()
@@ -122,7 +146,7 @@ def test_signup_duplicate_username_returns_400(client, db_session):
             "name": "new",
             "last_name": "user",
             "email": "new_dup_user@example.com",
-            "password": "password",
+            "password": "new_valid_password",
             "preferred_language": "es",
         },
     )
@@ -141,7 +165,7 @@ def test_signup_preferred_language_controls_seed_prompt_language(client, db_sess
             "name": "English",
             "last_name": "User",
             "email": "english_user@example.com",
-            "password": "password",
+            "password": "english_password",
             "preferred_language": "en",
         },
     )
@@ -197,6 +221,31 @@ def test_login_success_returns_token(client, user_payload):
     assert claims["role"] == "user"
 
 
+def test_login_accepts_legacy_sha256_hash_and_rehashes(client, db_session):
+    password = "legacy_password"
+    user = User(
+        username="legacy_user",
+        name="legacy",
+        last_name="user",
+        email="legacy_user@example.com",
+        hashed_password=sha256_crypt.hash(password),
+    )
+    db_session.add(user)
+    db_session.commit()
+    legacy_hash = user.hashed_password
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": user.username, "password": password},
+    )
+
+    assert response.status_code == 200
+    db_session.refresh(user)
+    assert user.hashed_password != legacy_hash
+    assert user.hashed_password.startswith("$argon2id$")
+    assert verify_password(password, user.hashed_password)
+
+
 def test_login_invalid_credentials_returns_401(client, db_session):
     db_session.add(
         User(
@@ -204,7 +253,7 @@ def test_login_invalid_credentials_returns_401(client, db_session):
             name="known",
             last_name="user",
             email="known_user@example.com",
-            hashed_password=sha256_crypt.hash("right_password"),
+            hashed_password=hash_password("right_password"),
         )
     )
     db_session.commit()
@@ -270,7 +319,7 @@ def test_generate_password_key_exists_returns_400(client, db_session, fake_redis
         name="recover",
         last_name="user",
         email="recover_user@example.com",
-        hashed_password=sha256_crypt.hash("original_password"),
+        hashed_password=hash_password("original_password"),
     )
     db_session.add(user)
     db_session.commit()
@@ -291,7 +340,7 @@ def test_generate_password_success_saves_password_and_calls_email(client, db_ses
         name="mail",
         last_name="user",
         email="mail_user@example.com",
-        hashed_password=sha256_crypt.hash("old_password"),
+        hashed_password=hash_password("old_password"),
     )
     db_session.add(user)
     db_session.commit()
@@ -319,7 +368,8 @@ def test_generate_password_success_saves_password_and_calls_email(client, db_ses
     assert fake_redis.get(key) == "temporary_pwd"
 
     updated = db_session.get(User, user.id)
-    assert sha256_crypt.verify("temporary_pwd", updated.hashed_password)
+    assert updated.hashed_password.startswith("$argon2id$")
+    assert verify_password("temporary_pwd", updated.hashed_password)
 
 
 def test_generate_password_email_failure_returns_500(client, db_session, monkeypatch):
@@ -328,7 +378,7 @@ def test_generate_password_email_failure_returns_500(client, db_session, monkeyp
         name="mail",
         last_name="fail",
         email="mail_fail_user@example.com",
-        hashed_password=sha256_crypt.hash("old_password"),
+        hashed_password=hash_password("old_password"),
     )
     db_session.add(user)
     db_session.commit()
@@ -382,7 +432,7 @@ def test_recover_password_not_found_in_redis_returns_404(client, db_session):
         name="recover",
         last_name="missing",
         email="recover_missing_pwd@example.com",
-        hashed_password=sha256_crypt.hash("old_password"),
+        hashed_password=hash_password("old_password"),
     )
     db_session.add(user)
     db_session.commit()
@@ -400,7 +450,7 @@ def test_recover_success_returns_key_and_password(client, db_session, fake_redis
         name="recover",
         last_name="ok",
         email="recover_ok@example.com",
-        hashed_password=sha256_crypt.hash("old_password"),
+        hashed_password=hash_password("old_password"),
     )
     db_session.add(user)
     db_session.commit()
