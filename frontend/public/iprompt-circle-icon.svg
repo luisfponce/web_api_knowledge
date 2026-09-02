@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="128"
+     height="128"
+     viewBox="0 0 128 128"
+     fill="none"
+     role="img"
+     aria-labelledby="iprompt-icon-title iprompt-icon-description">
+  <title id="iprompt-icon-title">iPrompt circular icon</title>
+  <desc id="iprompt-icon-description">A compact geometric prompt symbol in the orange and violet colors of iPrompt.</desc>
+
+  <defs>
+    <linearGradient id="iprompt-icon-core" x1="49" y1="49" x2="79" y2="81" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F08A4B"/>
+      <stop offset="0.52" stop-color="#D9908A"/>
+      <stop offset="1" stop-color="#9B7BEA"/>
+    </linearGradient>
+    <linearGradient id="iprompt-icon-ring" x1="16" y1="13" x2="112" y2="115" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7D513B"/>
+      <stop offset="1" stop-color="#4A3E5D"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="64" cy="64" r="60" fill="#211D1D" stroke="url(#iprompt-icon-ring)" stroke-width="3"/>
+  <path d="M37 68V49C37 40.72 43.72 34 52 34H76"
+        stroke="#F08A4B"
+        stroke-width="11"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+  <path d="M91 49V77C91 85.28 84.28 92 76 92H63L48 105V92"
+        stroke="#9B7BEA"
+        stroke-width="11"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+  <rect x="55.5" y="55.5" width="17" height="17" rx="5.5" transform="rotate(45 64 64)" fill="url(#iprompt-icon-core)"/>
+  <circle cx="64" cy="64" r="3.5" fill="#F7EFE8"/>
+</svg>

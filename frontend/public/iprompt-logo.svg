@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#20C8F6"/>
+      <stop offset="55%" stop-color="#168BFF"/>
+      <stop offset="100%" stop-color="#2455F5"/>
+    </linearGradient>
+    <linearGradient id="blueGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#25CCF7"/>
+      <stop offset="100%" stop-color="#1E63F3"/>
+    </linearGradient>
+    <linearGradient id="navyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182C4A"/>
+      <stop offset="100%" stop-color="#071A33"/>
+    </linearGradient>
+  </defs>
+
+  <!-- iPrompt geometric mark -->
+  <g transform="translate(42 44)">
+    <!-- dot -->
+    <circle cx="105" cy="86" r="40" fill="url(#blueGrad2)"/>
+
+    <!-- left stem / prompt pillar -->
+    <path d="M70 208
+             Q70 190 86 181
+             L143 147
+             Q151 142 151 152
+             L151 188
+             L70 236
+             Z"
+          fill="url(#blueGrad2)"/>
+
+    <path d="M70 245
+             L151 197
+             L151 355
+             Q151 384 123 384
+             L100 384
+             Q70 384 70 354
+             Z"
+          fill="url(#navyGrad)"/>
+
+    <!-- main forward / prompt ribbon -->
+    <path d="M176 102
+             Q176 84 192 74
+             Q207 65 223 74
+             L345 150
+             Q371 166 371 196
+             L371 245
+             Q371 274 346 291
+             L236 364
+             Q225 372 214 365
+             Q204 358 204 345
+             L204 323
+             Q204 308 217 299
+             L296 247
+             Q311 238 311 223
+             Q311 208 296 199
+             L190 134
+             Q176 125 176 110
+             Z"
+          fill="url(#blueGrad)"/>
+
+    <!-- dark folded tail -->
+    <path d="M205 323
+             Q205 309 217 300
+             L239 286
+             L287 316
+             L236 364
+             Q225 373 214 366
+             Q205 359 205 346
+             Z"
+          fill="url(#navyGrad)"/>
+  </g>
+</svg>

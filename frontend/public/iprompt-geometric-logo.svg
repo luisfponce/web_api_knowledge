@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="720"
+     height="176"
+     viewBox="0 0 720 176"
+     fill="none"
+     role="img"
+     aria-labelledby="iprompt-logo-title iprompt-logo-description">
+  <title id="iprompt-logo-title">iPrompt geometric logo</title>
+  <desc id="iprompt-logo-description">A geometric prompt symbol followed by a custom vector iPrompt wordmark.</desc>
+
+  <defs>
+    <linearGradient id="iprompt-mark-gradient" x1="38" y1="34" x2="132" y2="142" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F08A4B"/>
+      <stop offset="0.52" stop-color="#D9908A"/>
+      <stop offset="1" stop-color="#9B7BEA"/>
+    </linearGradient>
+    <linearGradient id="iprompt-ring-gradient" x1="26" y1="23" x2="148" y2="151" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7D513B"/>
+      <stop offset="1" stop-color="#4A3E5D"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Compact geometric prompt mark -->
+  <g aria-hidden="true">
+    <circle cx="88" cy="88" r="68" fill="#211D1D" stroke="url(#iprompt-ring-gradient)" stroke-width="3"/>
+
+    <!-- Two open corners suggest both a prompt window and a continuous conversation. -->
+    <path d="M54 92V66C54 53.85 63.85 44 76 44H105"
+          stroke="#F08A4B"
+          stroke-width="14"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+    <path d="M122 72V98C122 110.15 112.15 120 100 120H84L65 136V120"
+          stroke="#9B7BEA"
+          stroke-width="14"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+
+    <!-- Central diamond is the reusable prompt/spark motif. -->
+    <rect x="77" y="77" width="22" height="22" rx="7" transform="rotate(45 88 88)" fill="url(#iprompt-mark-gradient)"/>
+    <circle cx="88" cy="88" r="4.5" fill="#F7EFE8"/>
+  </g>
+
+  <!-- Font-independent wordmark, drawn entirely with rounded vector geometry. -->
+  <g aria-hidden="true"
+     transform="translate(191 34)"
+     stroke="#F7EFE8"
+     stroke-width="13"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+    <!-- i -->
+    <path d="M0 51V107"/>
+    <circle cx="0" cy="18" r="7" fill="#F08A4B" stroke="none"/>
+
+    <!-- P -->
+    <path d="M38 107V10H74C94 10 106 22 106 40C106 58 94 70 74 70H38"/>
+
+    <!-- r -->
+    <path d="M135 51V107M135 70C139 57 149 50 164 50"/>
+
+    <!-- o -->
+    <circle cx="204" cy="79" r="29"/>
+
+    <!-- m -->
+    <path d="M250 51V107M250 70C250 58 258 50 269 50C281 50 288 58 288 70V107M288 70C288 58 296 50 307 50C319 50 326 58 326 70V107"/>
+
+    <!-- p -->
+    <path d="M356 51V132M356 70C363 57 374 50 387 50C404 50 416 62 416 79C416 96 404 108 387 108C374 108 363 101 356 88"/>
+
+    <!-- t -->
+    <path d="M454 24V88C454 101 461 108 473 108M437 51H474"/>
+  </g>
+</svg>
