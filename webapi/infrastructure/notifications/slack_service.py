@@ -1,10 +1,21 @@
+import os
+import sys
+
 import httpx
 
 from core import config
 
 
+def _is_pytest_running() -> bool:
+    return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in sys.modules
+
+
 async def send_slack_notification(text: str, blocks: list[dict] | None = None) -> None:
-    if not config.SLACK_NOTIFICATIONS_ENABLED or not config.SLACK_WEBHOOK_URL:
+    if (
+        _is_pytest_running()
+        or not config.SLACK_NOTIFICATIONS_ENABLED
+        or not config.SLACK_WEBHOOK_URL
+    ):
         return
 
     payload: dict[str, object] = {"text": text}
