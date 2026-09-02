@@ -400,6 +400,27 @@ textarea:focus-visible {
     margin-top: calc(var(--space-2) * -1);
 }
 
+.password-requirements {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.password-requirements ul {
+    display: grid;
+    gap: var(--space-1);
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: var(--font-sm);
+}
+
+.requirement-met {
+    color: var(--success);
+}
+
+.requirement-unmet {
+    color: var(--muted);
+}
+
 .list {
     display: grid;
     gap: var(--space-3);
