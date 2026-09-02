@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from models.user import User
 from schemas.user_schema import UserRead, UserReadWithPrompts
 from db.db_connection import get_session
 from auth.auth_service import get_current_user
 from auth.password_service import hash_password
+from core.email_utils import normalize_email
 
 
 router = APIRouter()
@@ -47,19 +49,27 @@ def update_user(user_id: int, user: User,
                 current_user: dict = Depends(get_current_user)):
     user.name = user.name.lower()
     user.last_name = user.last_name.lower()
+    email = normalize_email(user.email)
     existing_user = session.get(User, user_id)
     if not existing_user:
         raise HTTPException(status_code=404, detail="User not found")
-    existing_user.name = user.name
-    existing_user.last_name = user.last_name
-    existing_user.email = user.email
-    existing_user.hashed_password = hash_password(user.hashed_password)
     # Ensure the username is unique
     statement = select(User).where(User.username == user.username, User.id != user_id)
     if session.exec(statement).first():
         raise HTTPException(status_code=400, detail="username already taken")
+    statement = select(User).where(User.email == email, User.id != user_id)
+    if session.exec(statement).first():
+        raise HTTPException(status_code=400, detail="email already taken")
+    existing_user.name = user.name
+    existing_user.last_name = user.last_name
+    existing_user.email = email
+    existing_user.hashed_password = hash_password(user.hashed_password)
     session.add(existing_user)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="user information already in use")
     session.refresh(existing_user)
     return existing_user
 

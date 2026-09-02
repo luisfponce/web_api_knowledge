@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, Body, Query, BackgroundTasks
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 from models.user import User
 from models.prompts import Prompts
 from db.db_connection import get_session
 from auth.auth_service import authenticate_user, crear_jwt, get_current_user, get_current_db_user
 from auth.password_service import hash_password
+from core.email_utils import normalize_email
 from core.creator_prompts import get_creator_prompt_seeds
 from infrastructure.email.smtp_service import send_email
 import secrets
@@ -38,36 +40,46 @@ def signup(
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
 ):
+    email = normalize_email(payload.email)
     statement = select(User).where(User.username == payload.username)
     result = session.exec(statement)
-    user_exists = result.one_or_none()
-    if user_exists:
+    field_exists = result.first()
+    if field_exists:
         raise HTTPException(status_code=400, detail="username already taken")
+    statement = select(User).where(User.email == email)
+    result = session.exec(statement)
+    field_exists = result.first()
+    if field_exists:
+        raise HTTPException(status_code=400, detail="email already taken")
     user = User(
         username=payload.username,
         name=payload.name,
         last_name=payload.last_name,
-        email=payload.email,
+        email=email,
         hashed_password=hash_password(payload.password),
         preferred_language=payload.preferred_language,
         role="user",
     )
-    session.add(user)
-    session.flush()
+    try:
+        session.add(user)
+        session.flush()
 
-    for seed in get_creator_prompt_seeds(user.preferred_language):
-        session.add(
-            Prompts(
-                user_id=user.id,
-                title=seed["title"],
-                model_name=seed["model_name"],
-                prompt_text=seed["prompt_text"],
-                category=seed["category"],
-                rate=seed["rate"],
+        for seed in get_creator_prompt_seeds(user.preferred_language):
+            session.add(
+                Prompts(
+                    user_id=user.id,
+                    title=seed["title"],
+                    model_name=seed["model_name"],
+                    prompt_text=seed["prompt_text"],
+                    category=seed["category"],
+                    rate=seed["rate"],
+                )
             )
-        )
 
-    session.commit()
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="registration information already in use")
     session.refresh(user)
     schedule_notification(background_tasks, lambda: notify_user_created(user))
     access_token = crear_jwt(

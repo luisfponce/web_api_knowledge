@@ -1,6 +1,7 @@
 import base64
 
 from passlib.hash import sha256_crypt
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from models.user import User
@@ -153,6 +154,96 @@ def test_signup_duplicate_username_returns_400(client, db_session):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "username already taken"
+    prompts = db_session.exec(select(Prompts)).all()
+    assert prompts == []
+
+
+def test_signup_duplicate_email_returns_400(client, db_session):
+    db_session.add(
+        User(
+            username="existing_email_user",
+            name="existing",
+            last_name="user",
+            email="taken_email@example.com",
+            hashed_password=hash_password("existing_password"),
+        )
+    )
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/auth/signup",
+        json={
+            "username": "new_email_user",
+            "name": "new",
+            "last_name": "user",
+            "email": "taken_email@example.com",
+            "password": "new_valid_password",
+            "preferred_language": "es",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "email already taken"
+    created = db_session.exec(select(User).where(User.username == "new_email_user")).first()
+    assert created is None
+    prompts = db_session.exec(select(Prompts)).all()
+    assert prompts == []
+
+
+def test_signup_duplicate_email_is_case_insensitive(client, db_session):
+    db_session.add(
+        User(
+            username="known_email_user",
+            name="known",
+            last_name="user",
+            email="known@example.com",
+            hashed_password=hash_password("existing_password"),
+        )
+    )
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/auth/signup",
+        json={
+            "username": "case_email_user",
+            "name": "case",
+            "last_name": "user",
+            "email": "Known@Example.com",
+            "password": "new_valid_password",
+            "preferred_language": "es",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "email already taken"
+    created = db_session.exec(select(User).where(User.username == "case_email_user")).first()
+    assert created is None
+    prompts = db_session.exec(select(Prompts)).all()
+    assert prompts == []
+
+
+def test_signup_integrity_error_returns_400(client, db_session, monkeypatch):
+    def fail_commit():
+        raise IntegrityError("INSERT INTO user", {}, Exception("duplicate"))
+
+    monkeypatch.setattr(db_session, "commit", fail_commit)
+
+    response = client.post(
+        "/api/v1/auth/signup",
+        json={
+            "username": "race_user",
+            "name": "race",
+            "last_name": "user",
+            "email": "race_user@example.com",
+            "password": "new_valid_password",
+            "preferred_language": "es",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "registration information already in use"
+    created = db_session.exec(select(User).where(User.username == "race_user")).first()
+    assert created is None
     prompts = db_session.exec(select(Prompts)).all()
     assert prompts == []
 

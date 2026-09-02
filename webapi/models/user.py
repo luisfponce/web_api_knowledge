@@ -6,10 +6,20 @@ from sqlmodel import Field, Relationship, SQLModel
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(max_length=50, index=True, nullable=False)
+    username: str = Field(
+        max_length=50,
+        index=True,
+        nullable=False,
+        sa_column_kwargs={"unique": True},
+    )
     name: str = Field(max_length=100, index=True, nullable=False)
     last_name: str = Field(max_length=100, index=True, nullable=False)
-    email: EmailStr = Field(max_length=100, nullable=False)
+    email: EmailStr = Field(
+        max_length=100,
+        index=True,
+        nullable=False,
+        sa_column_kwargs={"unique": True},
+    )
     hashed_password: str = Field(max_length=255)  # Longer for bcrypt hashes
     preferred_language: str = Field(
         default="es",

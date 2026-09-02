@@ -84,6 +84,23 @@ def test_update_user_success(client, auth_header, created_user, db_session):
     assert updated.hashed_password.startswith("$argon2id$")
 
 
+def test_update_user_normalizes_email(client, auth_header, created_user, db_session):
+    payload = {
+        "username": created_user.username,
+        "name": "Updated",
+        "last_name": "User",
+        "email": "Updated_User@Example.com",
+        "hashed_password": "new_password",
+    }
+
+    response = client.put(f"/api/v1/users/{created_user.id}", json=payload, headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.json()["email"] == "updated_user@example.com"
+    updated = db_session.get(User, created_user.id)
+    assert updated.email == "updated_user@example.com"
+
+
 def test_update_user_missing_returns_404(client, auth_header):
     payload = {
         "username": "missing",
@@ -122,6 +139,33 @@ def test_update_user_duplicate_username_returns_400(client, auth_header, created
 
     assert response.status_code == 400
     assert response.json()["detail"] == "username already taken"
+
+
+def test_update_user_duplicate_email_returns_400(client, auth_header, created_user, db_session):
+    another_user = User(
+        username="email_owner",
+        name="Another",
+        last_name="User",
+        email="owned_email@example.com",
+        hashed_password=hash_password("existing_password"),
+    )
+    db_session.add(another_user)
+    db_session.commit()
+
+    payload = {
+        "username": created_user.username,
+        "name": "Updated",
+        "last_name": "User",
+        "email": "Owned_Email@Example.com",
+        "hashed_password": "new_password",
+    }
+
+    response = client.put(f"/api/v1/users/{created_user.id}", json=payload, headers=auth_header)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "email already taken"
+    db_session.refresh(created_user)
+    assert created_user.email == "base_user@example.com"
 
 
 def test_delete_user_success(client, auth_header, created_user):
