@@ -23,6 +23,7 @@ import type {
     PromptInput,
     PromptRecord,
 } from '../../features/prompts/prompts-types'
+import { useDocumentTitle } from '../../lib/hooks/use-document-title'
 
 const ratingOptions = [1, 2, 3, 4, 5].map((rating) => ({
     value: String(rating),
@@ -31,6 +32,7 @@ const ratingOptions = [1, 2, 3, 4, 5].map((rating) => ({
 
 export function AdminPromptsPage() {
     const { t } = useTranslation()
+    useDocumentTitle(t('titles.admin'))
     const { session } = useAuth()
     const queryClient = useQueryClient()
     const [filters, setFilters] = useState<PromptFilters>({})

@@ -8,6 +8,7 @@ import { InlineError } from '../../components/ui/inline-error'
 import { Input } from '../../components/ui/input'
 import { ThemeToggle } from '../../components/ui/theme-toggle'
 import { redeemRecoveryKey, requestRecoveryKey } from '../../features/auth/auth-service'
+import { useDocumentTitle } from '../../lib/hooks/use-document-title'
 import {
     recoveryRedeemSchema,
     recoveryRequestSchema,
@@ -15,6 +16,7 @@ import {
 
 export function RecoveryPage() {
     const { t } = useTranslation()
+    useDocumentTitle(t('titles.recovery'))
     const [username, setUsername] = useState('')
     const [key, setKey] = useState('')
     const [message, setMessage] = useState<string | null>(null)

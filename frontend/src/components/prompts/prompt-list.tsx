@@ -8,6 +8,8 @@ type PromptListProps = {
     prompts: PromptRecord[]
     onEdit: (prompt: PromptRecord) => void
     onDelete: (prompt: PromptRecord) => void
+    emptyTitle?: string
+    emptyDescription?: string
 }
 
 function summarizePromptText(text: string, maxLength = 140) {
@@ -20,15 +22,15 @@ function summarizePromptText(text: string, maxLength = 140) {
     return `${normalizedText.slice(0, maxLength).trimEnd()}...`
 }
 
-export function PromptList({ prompts, onEdit, onDelete }: PromptListProps) {
+export function PromptList({ prompts, onEdit, onDelete, emptyTitle, emptyDescription }: PromptListProps) {
     const { t } = useTranslation()
     const [selectedPrompt, setSelectedPrompt] = useState<PromptRecord | null>(null)
 
     if (!prompts.length) {
         return (
             <EmptyState
-                title={t('prompts.emptyTitle')}
-                description={t('prompts.emptyDescription')}
+                title={emptyTitle ?? t('prompts.emptyTitle')}
+                description={emptyDescription ?? t('prompts.emptyDescription')}
             />
         )
     }

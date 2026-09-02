@@ -8,12 +8,14 @@ import { InlineError } from '../../components/ui/inline-error'
 import { Input } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
 import { ThemeToggle } from '../../components/ui/theme-toggle'
+import { getRegistrationErrorMessageKey } from '../../features/auth/auth-errors'
 import { useAuth } from '../../features/auth/auth-store'
-import { ApiError } from '../../lib/http/api-error'
+import { useDocumentTitle } from '../../lib/hooks/use-document-title'
 import { PASSWORD_MIN_LENGTH, isCommonPassword, registerSchema } from '../../lib/validation/auth-schemas'
 
 export function RegisterPage() {
     const { t, i18n } = useTranslation()
+    useDocumentTitle(t('titles.createAccount'))
     const navigate = useNavigate()
     const { signup } = useAuth()
     const [form, setForm] = useState({
@@ -65,7 +67,8 @@ export function RegisterPage() {
             navigate('/app/prompts', { replace: true })
         } catch (err) {
             const message = err instanceof Error ? err.message : t('auth.unableToCreate')
-            setError(err instanceof ApiError && err.status === 400 ? t('auth.usernameTaken') : message)
+            const registrationErrorKey = getRegistrationErrorMessageKey(err)
+            setError(registrationErrorKey ? t(registrationErrorKey) : message)
         } finally {
             setLoading(false)
         }

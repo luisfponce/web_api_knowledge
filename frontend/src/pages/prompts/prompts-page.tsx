@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PromptEditorDrawer, type PromptEditorState } from '../../components/prompts/prompt-editor-drawer'
 import { PromptList } from '../../components/prompts/prompt-list'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
 import { ConfirmDialog } from '../../components/ui/confirm-dialog'
+import { Input } from '../../components/ui/input'
 import { InlineError } from '../../components/ui/inline-error'
 import { PageHeader } from '../../components/ui/page-header'
+import { Select } from '../../components/ui/select'
 import { useAuth } from '../../features/auth/auth-store'
 import {
     listCategoryOptions,
@@ -19,17 +21,33 @@ import {
     listPrompts,
     updatePrompt,
 } from '../../features/prompts/prompts-service'
+import {
+    applyPromptCatalogControls,
+    defaultPromptCatalogControls,
+    hasActivePromptCatalogControls,
+    type PromptCatalogSort,
+} from '../../features/prompts/prompt-catalog-utils'
 import type {
     PromptInput,
     PromptRecord,
 } from '../../features/prompts/prompts-types'
+import { useDocumentTitle } from '../../lib/hooks/use-document-title'
+
+const ratingOptions = [1, 2, 3, 4, 5].map((rating) => ({
+    value: String(rating),
+    label: `${rating}/5`,
+}))
+
+const emptyPrompts: PromptRecord[] = []
 
 export function PromptsPage() {
     const { t } = useTranslation()
+    useDocumentTitle(t('titles.promptLibrary'))
     const { session } = useAuth()
     const queryClient = useQueryClient()
     const [editorState, setEditorState] = useState<PromptEditorState>(null)
     const [promptToDelete, setPromptToDelete] = useState<PromptRecord | null>(null)
+    const [catalogControls, setCatalogControls] = useState(defaultPromptCatalogControls)
     const [error, setError] = useState<string | null>(null)
 
     const token = session.token
@@ -148,13 +166,25 @@ export function PromptsPage() {
         setEditorState(null)
     }
 
-    const prompts = promptsQuery.data ?? []
-    const averageRating = prompts.length
-        ? prompts.reduce((total, prompt) => total + prompt.rate, 0) / prompts.length
+    const prompts = promptsQuery.data ?? emptyPrompts
+    const visiblePrompts = useMemo(
+        () => applyPromptCatalogControls(prompts, catalogControls),
+        [catalogControls, prompts],
+    )
+    const hasActiveControls = hasActivePromptCatalogControls(catalogControls)
+    const averageRating = visiblePrompts.length
+        ? visiblePrompts.reduce((total, prompt) => total + prompt.rate, 0) / visiblePrompts.length
         : 0
-    const categoryCount = new Set(prompts.map((prompt) => prompt.category)).size
+    const categoryCount = new Set(visiblePrompts.map((prompt) => prompt.category)).size
     const optionErrorMessage = categoriesQuery.error || modelsQuery.error ? t('prompts.dropdownError') : null
     const drawerErrorMessage = error ?? optionErrorMessage
+    const sortOptions = [
+        { value: 'newest', label: t('prompts.sort.newest') },
+        { value: 'title', label: t('prompts.sort.title') },
+        { value: 'rating', label: t('prompts.sort.rating') },
+        { value: 'model', label: t('prompts.sort.model') },
+        { value: 'category', label: t('prompts.sort.category') },
+    ]
 
     return (
         <section className="stack">
@@ -172,11 +202,11 @@ export function PromptsPage() {
             <div className="stats-grid">
                 <Card className="stat-card">
                     <span className="label">{t('prompts.stats.total')}</span>
-                    <strong>{prompts.length}</strong>
+                    <strong>{visiblePrompts.length}</strong>
                 </Card>
                 <Card className="stat-card">
                     <span className="label">{t('prompts.stats.averageRating')}</span>
-                    <strong>{prompts.length ? t('common.rating', { value: averageRating.toFixed(1) }) : t('prompts.stats.emptyRating')}</strong>
+                    <strong>{visiblePrompts.length ? t('common.rating', { value: averageRating.toFixed(1) }) : t('prompts.stats.emptyRating')}</strong>
                 </Card>
                 <Card className="stat-card">
                     <span className="label">{t('prompts.stats.categories')}</span>
@@ -191,14 +221,74 @@ export function PromptsPage() {
                         <p className="muted">{t('prompts.listDescription')}</p>
                     </div>
                 </div>
+                <div className="catalog-controls">
+                    <Input
+                        id="prompt-search"
+                        label={t('prompts.filters.search')}
+                        placeholder={t('prompts.filters.searchPlaceholder')}
+                        value={catalogControls.search}
+                        onChange={(event) => setCatalogControls((current) => ({ ...current, search: event.target.value }))}
+                    />
+                    <Select
+                        id="prompt-model-filter"
+                        label={t('prompts.filters.model')}
+                        options={modelsQuery.data?.items ?? []}
+                        placeholder={t('common.selectOption')}
+                        value={catalogControls.model}
+                        onChange={(event) => setCatalogControls((current) => ({ ...current, model: event.target.value }))}
+                    />
+                    <Select
+                        id="prompt-category-filter"
+                        label={t('prompts.filters.category')}
+                        options={categoriesQuery.data?.items ?? []}
+                        placeholder={t('common.selectOption')}
+                        value={catalogControls.category}
+                        onChange={(event) => setCatalogControls((current) => ({ ...current, category: event.target.value }))}
+                    />
+                    <Select
+                        id="prompt-rating-filter"
+                        label={t('prompts.filters.rating')}
+                        options={ratingOptions}
+                        placeholder={t('common.selectOption')}
+                        value={catalogControls.rating}
+                        onChange={(event) => setCatalogControls((current) => ({ ...current, rating: event.target.value }))}
+                    />
+                    <Select
+                        id="prompt-sort"
+                        label={t('prompts.filters.sort')}
+                        options={sortOptions}
+                        placeholder={t('common.selectOption')}
+                        value={catalogControls.sort}
+                        onChange={(event) => setCatalogControls((current) => ({
+                            ...current,
+                            sort: (event.target.value || defaultPromptCatalogControls.sort) as PromptCatalogSort,
+                        }))}
+                    />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        className="catalog-clear-button"
+                        disabled={!hasActiveControls}
+                        onClick={() => setCatalogControls(defaultPromptCatalogControls)}
+                    >
+                        {t('prompts.filters.clear')}
+                    </Button>
+                </div>
+                <p className="muted">
+                    {hasActiveControls
+                        ? t('prompts.filters.visibleCount', { visible: visiblePrompts.length, total: prompts.length })
+                        : t('prompts.filters.allVisible', { count: prompts.length })}
+                </p>
                 {promptsQuery.isLoading ? <p className="muted">{t('common.loading')}</p> : null}
                 {error && !editorState ? <InlineError message={error} /> : null}
                 {optionErrorMessage && !editorState ? <InlineError message={optionErrorMessage} /> : null}
                 {promptsQuery.data ? (
                     <PromptList
-                        prompts={prompts}
+                        prompts={visiblePrompts}
                         onEdit={openEditDrawer}
                         onDelete={setPromptToDelete}
+                        emptyTitle={hasActiveControls ? t('prompts.noResultsTitle') : undefined}
+                        emptyDescription={hasActiveControls ? t('prompts.noResultsDescription') : undefined}
                     />
                 ) : null}
             </Card>

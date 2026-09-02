@@ -8,10 +8,12 @@ import { Input } from '../../components/ui/input'
 import { LanguageSwitcher } from '../../components/i18n/language-switcher'
 import { ThemeToggle } from '../../components/ui/theme-toggle'
 import { useAuth } from '../../features/auth/auth-store'
+import { useDocumentTitle } from '../../lib/hooks/use-document-title'
 import { loginSchema } from '../../lib/validation/auth-schemas'
 
 export function LoginPage() {
     const { t } = useTranslation()
+    useDocumentTitle(t('titles.signIn'))
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const { login } = useAuth()

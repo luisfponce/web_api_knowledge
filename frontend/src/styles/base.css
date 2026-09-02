@@ -560,6 +560,18 @@ textarea:focus-visible {
     gap: var(--space-3);
 }
 
+.catalog-controls {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1.4fr) repeat(4, minmax(9rem, 1fr)) auto;
+    align-items: end;
+    gap: var(--space-3);
+}
+
+.catalog-clear-button {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
 .badge {
     border: 1px solid var(--border);
     border-radius: 999px;
@@ -1121,6 +1133,10 @@ textarea:focus-visible {
     }
 
     .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .catalog-controls {
         grid-template-columns: 1fr;
     }
 }

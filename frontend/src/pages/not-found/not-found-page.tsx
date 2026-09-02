@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/card'
+import { useDocumentTitle } from '../../lib/hooks/use-document-title'
 
 export function NotFoundPage() {
+    useDocumentTitle('Page not found')
+
     return (
         <div className="centered-page">
             <Card className="auth-card stack">

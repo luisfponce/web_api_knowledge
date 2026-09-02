@@ -4,10 +4,12 @@ import { LanguageSwitcher } from '../../components/i18n/language-switcher'
 import { Badge } from '../../components/ui/badge'
 import { Card } from '../../components/ui/card'
 import { ThemeToggle } from '../../components/ui/theme-toggle'
+import { useDocumentTitle } from '../../lib/hooks/use-document-title'
 import { landingSamples } from './landing-samples'
 
 export function LandingPage() {
     const { t } = useTranslation()
+    useDocumentTitle()
     const benefits = t('landing.benefits', { returnObjects: true }) as Array<{ title: string; copy: string }>
     const workflow = t('landing.workflow', { returnObjects: true }) as string[]
     const creatorOffers = t('landing.creatorOffers.cards', { returnObjects: true }) as Array<{
