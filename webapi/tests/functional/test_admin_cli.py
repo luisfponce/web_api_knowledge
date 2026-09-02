@@ -1,7 +1,7 @@
 import pytest
-from passlib.hash import sha256_crypt
 from sqlmodel import select
 
+from auth.password_service import hash_password, verify_password
 from admin_cli import (
     SuperAdminBootstrapError,
     _compose_host_fallback_db_url,
@@ -20,7 +20,8 @@ def test_bootstrap_super_admin_creates_first_god_user(db_session):
 
     assert result.action == "created"
     assert result.user.role == "god"
-    assert sha256_crypt.verify("secret_password", result.user.hashed_password)
+    assert verify_password("secret_password", result.user.hashed_password)
+    assert result.user.hashed_password.startswith("$argon2id$")
 
     stored = db_session.exec(select(User).where(User.username == "root_user")).one()
     assert stored.role == "god"
@@ -32,7 +33,7 @@ def test_bootstrap_super_admin_promotes_existing_user_when_no_god_exists(db_sess
         name="Regular",
         last_name="User",
         email="operator@example.com",
-        hashed_password=sha256_crypt.hash("old_password"),
+        hashed_password=hash_password("old_password"),
     )
     db_session.add(user)
     db_session.commit()
@@ -49,7 +50,8 @@ def test_bootstrap_super_admin_promotes_existing_user_when_no_god_exists(db_sess
     assert result.action == "promoted"
     assert result.user.role == "god"
     assert result.user.email == "operator-admin@example.com"
-    assert sha256_crypt.verify("new_password", result.user.hashed_password)
+    assert verify_password("new_password", result.user.hashed_password)
+    assert result.user.hashed_password.startswith("$argon2id$")
 
 
 def test_bootstrap_super_admin_is_idempotent_for_same_god_user(db_session):

@@ -4,12 +4,12 @@ import logging
 import os
 from dataclasses import dataclass
 
-from passlib.hash import sha256_crypt
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 from sqlmodel import SQLModel, Session, create_engine, select
 
 from core import config
+from auth.password_service import hash_password
 from models.user import User
 
 
@@ -49,7 +49,7 @@ def bootstrap_super_admin(
         user.name = name
         user.last_name = last_name
         user.email = email
-        user.hashed_password = sha256_crypt.hash(password)
+        user.hashed_password = hash_password(password)
         user.role = SUPER_ADMIN_ROLE
         action = "promoted"
     else:
@@ -58,7 +58,7 @@ def bootstrap_super_admin(
             name=name,
             last_name=last_name,
             email=email,
-            hashed_password=sha256_crypt.hash(password),
+            hashed_password=hash_password(password),
             role=SUPER_ADMIN_ROLE,
         )
         action = "created"

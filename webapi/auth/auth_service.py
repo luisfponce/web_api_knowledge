@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import datetime, timedelta
 from typing import Optional
@@ -5,10 +6,10 @@ from typing import Optional
 import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from passlib.hash import sha256_crypt
 from sqlmodel import Session, select
 
 from core import config
+from auth.password_service import hash_password, password_hash_needs_update, verify_password
 from db.db_connection import get_session
 from dotenv import load_dotenv
 from models.user import User
@@ -18,12 +19,22 @@ load_dotenv()
 SECRET_KEY = config.JWT_SECRET_KEY
 ALGORITHM = config.JWT_ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+LOGGER = logging.getLogger(__name__)
 
 
 def authenticate_user(username: str, password: str, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.username == username)).first()
-    if not user or not sha256_crypt.verify(password, user.hashed_password):
+    if not user or not verify_password(password, user.hashed_password):
         return None
+    if password_hash_needs_update(user.hashed_password):
+        try:
+            user.hashed_password = hash_password(password)
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        except Exception:  # pylint: disable=broad-exception-caught
+            session.rollback()
+            LOGGER.warning("password_rehash_failed user_id=%s", user.id, exc_info=True)
     return user
 
 

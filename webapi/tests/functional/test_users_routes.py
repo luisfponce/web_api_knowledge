@@ -1,8 +1,8 @@
-from passlib.hash import sha256_crypt
 from sqlmodel import select
 
 from models.user import User
 from auth.auth_service import crear_jwt
+from auth.password_service import hash_password, verify_password
 
 
 def test_read_users_success(client, auth_header, created_user):
@@ -80,7 +80,8 @@ def test_update_user_success(client, auth_header, created_user, db_session):
     assert body["email"] == "updated_user@example.com"
 
     updated = db_session.get(User, created_user.id)
-    assert sha256_crypt.verify("new_password", updated.hashed_password)
+    assert verify_password("new_password", updated.hashed_password)
+    assert updated.hashed_password.startswith("$argon2id$")
 
 
 def test_update_user_missing_returns_404(client, auth_header):
@@ -89,7 +90,7 @@ def test_update_user_missing_returns_404(client, auth_header):
         "name": "Missing",
         "last_name": "User",
         "email": "missing_user@example.com",
-        "hashed_password": "password",
+        "hashed_password": "valid_password",
     }
 
     response = client.put("/api/v1/users/9999", json=payload, headers=auth_header)
@@ -104,7 +105,7 @@ def test_update_user_duplicate_username_returns_400(client, auth_header, created
         name="Another",
         last_name="User",
         email="another_user@example.com",
-        hashed_password=sha256_crypt.hash("password"),
+        hashed_password=hash_password("existing_password"),
     )
     db_session.add(another_user)
     db_session.commit()

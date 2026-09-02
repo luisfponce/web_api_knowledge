@@ -7,7 +7,7 @@ from main import myapp
 client = TestClient(myapp)
 
 TEST_USER = "testuser"
-TEST_PSW  = "testPSW"
+TEST_PSW  = "test_password"
 VALID_MODEL_NAME = MODEL_OPTIONS[0]["value"]
 
 def test_root():
