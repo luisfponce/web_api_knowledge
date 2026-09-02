@@ -11,6 +11,7 @@ def test_send_slack_notification_disabled_makes_no_http_call(monkeypatch):
         def __init__(self, *args, **kwargs):
             calls.append((args, kwargs))
 
+    monkeypatch.setattr(slack_service, "_is_pytest_running", lambda: False)
     monkeypatch.setattr(slack_service.config, "SLACK_NOTIFICATIONS_ENABLED", False)
     monkeypatch.setattr(slack_service.config, "SLACK_WEBHOOK_URL", "https://hooks.slack.test/example")
     monkeypatch.setattr(slack_service.httpx, "AsyncClient", FakeAsyncClient)
@@ -27,8 +28,25 @@ def test_send_slack_notification_missing_url_makes_no_http_call(monkeypatch):
         def __init__(self, *args, **kwargs):
             calls.append((args, kwargs))
 
+    monkeypatch.setattr(slack_service, "_is_pytest_running", lambda: False)
     monkeypatch.setattr(slack_service.config, "SLACK_NOTIFICATIONS_ENABLED", True)
     monkeypatch.setattr(slack_service.config, "SLACK_WEBHOOK_URL", "")
+    monkeypatch.setattr(slack_service.httpx, "AsyncClient", FakeAsyncClient)
+
+    asyncio.run(slack_service.send_slack_notification("ignored"))
+
+    assert calls == []
+
+
+def test_send_slack_notification_under_pytest_makes_no_http_call(monkeypatch):
+    calls = []
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            calls.append((args, kwargs))
+
+    monkeypatch.setattr(slack_service.config, "SLACK_NOTIFICATIONS_ENABLED", True)
+    monkeypatch.setattr(slack_service.config, "SLACK_WEBHOOK_URL", "https://hooks.slack.test/example")
     monkeypatch.setattr(slack_service.httpx, "AsyncClient", FakeAsyncClient)
 
     asyncio.run(slack_service.send_slack_notification("ignored"))
@@ -57,6 +75,7 @@ def test_send_slack_notification_posts_expected_json(monkeypatch):
             calls.append((url, json, self.timeout))
             return FakeResponse()
 
+    monkeypatch.setattr(slack_service, "_is_pytest_running", lambda: False)
     monkeypatch.setattr(slack_service.config, "SLACK_NOTIFICATIONS_ENABLED", True)
     monkeypatch.setattr(slack_service.config, "SLACK_WEBHOOK_URL", "https://hooks.slack.test/example")
     monkeypatch.setattr(slack_service.config, "SLACK_NOTIFICATION_TIMEOUT_SECONDS", 2.5)
