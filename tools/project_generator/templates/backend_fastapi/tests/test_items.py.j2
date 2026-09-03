@@ -1,0 +1,15 @@
+from fastapi.testclient import TestClient
+
+
+def test_list_items_starts_empty(client: TestClient) -> None:
+    response = client.get("/api/v1/items")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_create_item(client: TestClient) -> None:
+    response = client.post("/api/v1/items", json={"title": "First item", "description": "Demo"})
+    assert response.status_code == 201
+    body = response.json()
+    assert body["title"] == "First item"
+    assert body["description"] == "Demo"

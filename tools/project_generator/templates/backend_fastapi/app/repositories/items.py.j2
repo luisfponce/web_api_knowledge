@@ -1,0 +1,34 @@
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models.item import Item
+from app.schemas.item import ItemCreate, ItemUpdate
+
+
+def list_items(session: Session) -> list[Item]:
+    return list(session.scalars(select(Item).order_by(Item.created_at.desc(), Item.id.desc())).all())
+
+
+def get_item(session: Session, item_id: int) -> Item | None:
+    return session.get(Item, item_id)
+
+
+def create_item(session: Session, payload: ItemCreate) -> Item:
+    item = Item(**payload.model_dump())
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+def update_item(session: Session, item: Item, payload: ItemUpdate) -> Item:
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, key, value)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+def delete_item(session: Session, item: Item) -> None:
+    session.delete(item)
+    session.commit()

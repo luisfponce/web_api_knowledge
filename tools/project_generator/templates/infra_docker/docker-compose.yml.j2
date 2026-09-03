@@ -1,0 +1,91 @@
+services:
+{% if config.has_backend %}
+  backend:
+    build: ./backend
+    env_file: .env
+    expose:
+      - "8000"
+{% if config.has_persistent_database or config.infra.redis %}
+    depends_on:
+{% if config.has_persistent_database %}
+      {{ config.db_service_name }}:
+        condition: service_healthy
+{% endif %}
+{% if config.infra.redis %}
+      redis:
+        condition: service_healthy
+{% endif %}
+{% endif %}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+{% endif %}
+{% if config.has_frontend %}
+  frontend:
+    build: ./frontend
+    expose:
+      - "80"
+{% if config.has_backend %}
+    depends_on:
+      backend:
+        condition: service_healthy
+{% endif %}
+
+{% endif %}
+{% if config.database.value == "postgresql" %}
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-app}
+      POSTGRES_USER: ${DB_USER:-app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+{% endif %}
+{% if config.database.value == "mariadb" %}
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_DATABASE: ${DB_NAME:-app}
+      MARIADB_USER: ${DB_USER:-app}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-change-me}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change-root-me}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+{% endif %}
+{% if config.infra.redis %}
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+{% endif %}
+{% if config.has_persistent_database %}
+volumes:
+{% if config.database.value == "postgresql" %}
+  postgres_data:
+{% endif %}
+{% if config.database.value == "mariadb" %}
+  mariadb_data:
+{% endif %}
+{% endif %}

@@ -1,0 +1,65 @@
+[project]
+name = {{ (config.package_name ~ "-backend") | toml_string }}
+version = "0.1.0"
+description = {{ (config.description ~ " backend") | toml_string }}
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "pydantic-settings>=2.4,<3",
+{% if config.has_database %}
+  "sqlalchemy>=2.0,<3",
+{% endif %}
+{% if config.database.value == "postgresql" %}
+  "psycopg[binary]>=3.2,<4",
+{% endif %}
+{% if config.database.value == "mariadb" %}
+  "pymysql>=1.1,<2",
+{% endif %}
+{% if config.backend_options.auth %}
+  "pydantic[email]>=2.0,<3",
+  "PyJWT>=2.9,<3",
+  "passlib[argon2]>=1.7,<2",
+  "python-multipart>=0.0.9,<1",
+{% endif %}
+]
+
+[project.optional-dependencies]
+dev = [
+{% if config.backend_options.pytest %}
+  "pytest>=8.0,<9",
+  "httpx>=0.27,<1",
+{% endif %}
+{% if config.backend_options.ruff %}
+  "ruff>=0.6,<1",
+{% endif %}
+{% if config.backend_options.mypy %}
+  "mypy>=1.11,<2",
+{% endif %}
+{% if config.backend_options.alembic %}
+  "alembic>=1.13,<2",
+{% endif %}
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["alembic*", "tests*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+{% if config.backend_options.pytest %}
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+{% endif %}
+{% if config.backend_options.mypy %}
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = []
+{% endif %}

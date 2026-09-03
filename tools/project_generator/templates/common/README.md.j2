@@ -1,0 +1,76 @@
+# {{ config.name }}
+
+{{ config.description }}
+
+## Stack
+
+- Structure: {{ config.structure.value }}
+- Backend: {{ config.backend.value }}
+- Frontend: {{ config.frontend.value }}
+- Database: {{ config.database.value }}
+- Services: {{ services | join(", ") if services else "none" }}
+
+## Layout
+
+{% if config.has_backend %}
+- `backend/`: FastAPI app, API routes, settings, database access, tests, and Python tooling.
+{% endif %}
+{% if config.has_frontend %}
+- `frontend/`: React + Vite app with feature folders, shared UI, API client code, and tests.
+{% endif %}
+{% if config.infra.docker %}
+- `docker-compose*.yml`: local and production container orchestration.
+{% endif %}
+- `.env.example`: committed local configuration contract with safe placeholders.
+- `Makefile`: commands generated for the selected stack.
+
+## Local Setup
+
+```bash
+cp .env.example .env
+```
+
+{% if config.has_backend %}
+```bash
+cd backend
+python -m venv .venv
+. .venv/bin/activate
+pip install -e '.[dev]'
+uvicorn app.main:app --reload
+```
+{% endif %}
+
+{% if config.has_frontend %}
+```bash
+cd frontend
+npm install
+npm run dev
+```
+{% endif %}
+
+{% if config.infra.docker %}
+## Docker
+
+```bash
+make up
+make down
+```
+
+The frontend is published at `http://127.0.0.1:8080` when generated. API traffic uses `/api/v1`; browsers should not call internal Compose hostnames such as `backend` directly.
+{% endif %}
+
+## Quality
+
+```bash
+make lint
+make test
+{% if config.has_frontend %}make build{% endif %}
+```
+
+{% if config.backend_options.alembic %}
+## Migrations
+
+```bash
+make migrate
+```
+{% endif %}

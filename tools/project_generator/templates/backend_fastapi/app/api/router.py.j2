@@ -1,0 +1,18 @@
+from fastapi import APIRouter
+
+{% if config.backend_options.auth %}
+from app.api.v1 import auth
+{% endif %}
+from app.api.v1 import health
+{% if config.has_database %}
+from app.api.v1 import items
+{% endif %}
+
+api_router = APIRouter()
+api_router.include_router(health.router, tags=["health"])
+{% if config.backend_options.auth %}
+api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+{% endif %}
+{% if config.has_database %}
+api_router.include_router(items.router, prefix="/items", tags=["items"])
+{% endif %}

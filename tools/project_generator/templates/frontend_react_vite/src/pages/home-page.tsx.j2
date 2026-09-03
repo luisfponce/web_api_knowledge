@@ -1,0 +1,27 @@
+import { Link } from 'react-router-dom';
+
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+
+export const homeHeadline = {{ config.name | js_string }};
+
+export function HomePage() {
+  return (
+    <main className="page-shell hero-grid">
+      <section className="stack hero-copy">
+        <p className="eyebrow">Generated application</p>
+        <h1>{homeHeadline}</h1>
+        <p className="lede">{ {{ config.description | js_string }} }</p>
+        <Link to="/items">
+          <Button>View items</Button>
+        </Link>
+      </section>
+      <Card className="stack metric-card">
+        <span className="muted">API prefix</span>
+        <strong>/api/v1</strong>
+        <span className="muted">Generated services</span>
+        <strong>{{ services | join(', ') if services else 'none' }}</strong>
+      </Card>
+    </main>
+  );
+}

@@ -1,0 +1,11 @@
+{
+  email admin@example.com
+}
+
+example.com {
+{% if config.has_frontend %}
+  reverse_proxy frontend:80
+{% else %}
+  reverse_proxy backend:8000
+{% endif %}
+}

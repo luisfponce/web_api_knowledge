@@ -1,0 +1,11 @@
+export type Item = {
+  id: number;
+  title: string;
+  description: string | null;
+  created_at: string;
+};
+
+export type ItemCreate = {
+  title: string;
+  description?: string | null;
+};

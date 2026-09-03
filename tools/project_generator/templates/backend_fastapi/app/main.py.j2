@@ -1,0 +1,24 @@
+from fastapi import FastAPI
+
+from app.api.router import api_router
+from app.core.config import settings
+{% if config.has_database and not config.backend_options.alembic %}
+from app.db.session import init_db
+{% endif %}
+
+app = FastAPI(title=settings.project_name, version="0.1.0")
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {"message": settings.project_name, "docs": "/docs"}
+
+
+{% if config.has_database and not config.backend_options.alembic %}
+@app.on_event("startup")
+def create_local_schema() -> None:
+    init_db()
+
+
+{% endif %}
+app.include_router(api_router, prefix=settings.api_v1_prefix)

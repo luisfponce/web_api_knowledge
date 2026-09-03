@@ -1,0 +1,9 @@
+import { describe, expect, it } from 'vitest';
+
+import { homeHeadline } from './home-page';
+
+describe('HomePage', () => {
+  it('uses the generated project name', () => {
+    expect(homeHeadline).toBe({{ config.name | js_string }});
+  });
+});

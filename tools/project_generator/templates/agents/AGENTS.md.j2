@@ -1,0 +1,61 @@
+# Agent Instructions
+
+## Architecture
+
+{{ config.name }} is a {{ config.structure.value }} project generated with these selected modules: backend `{{ config.backend.value }}`, frontend `{{ config.frontend.value }}`, database `{{ config.database.value }}`, services `{{ services | join(", ") if services else "none" }}`.
+
+## Folder Responsibilities
+
+{% if config.has_backend %}
+- `backend/app/api`: FastAPI router composition and versioned endpoint modules.
+- `backend/app/core`: settings, security, and structured error helpers.
+- `backend/app/db`: database engine/session setup; do not create persistent schemas at import time.
+- `backend/app/models`: SQLAlchemy ORM models only.
+- `backend/app/schemas`: Pydantic request and response schemas.
+- `backend/app/repositories`: persistence queries and commands.
+- `backend/app/services`: business logic orchestration.
+- `backend/tests`: dependency-overridden API tests.
+{% endif %}
+{% if config.has_frontend %}
+- `frontend/src/app`: providers and route definitions.
+- `frontend/src/components`: shared UI primitives.
+- `frontend/src/features`: typed DTOs and feature-specific API services.
+- `frontend/src/lib`: cross-cutting utilities such as HTTP helpers.
+- `frontend/src/pages`: route-level components.
+- `frontend/src/styles`: global CSS tokens and base styles.
+{% endif %}
+
+## Backend Resource Workflow
+
+Add a resource by creating an ORM model, Pydantic schemas, repository, service only when business logic exists, API router, route tests, and an Alembic migration when migrations are enabled. Never use ORM models as request bodies. Collection endpoints should return `200 []` when empty.
+
+## Frontend Feature Workflow
+
+Add feature DTOs in `features/<name>/*-types.ts`, API calls in `*-service.ts`, route/page components under `pages`, shared primitives only when reusable, and focused tests for transformation or route behavior.
+
+## Commands
+
+- `make lint`: run generated lint/type checks.
+- `make test`: run generated test suites.
+{% if config.has_frontend %}
+- `make build`: build the frontend.
+{% endif %}
+{% if config.infra.docker %}
+- `make up`: start the selected Compose stack.
+- `make down`: stop the selected Compose stack.
+{% endif %}
+{% if config.backend_options.alembic %}
+- `make migrate`: apply Alembic migrations.
+{% endif %}
+
+## Environment Rules
+
+Use `.env.example` as the committed contract. Do not commit `.env`, generated secrets, or production credentials. Browser code should use relative `/api/v1` requests and must not call Compose hostnames directly.
+
+## Testing Expectations
+
+Keep tests aligned with selected modules. Backend tests should use dependency overrides instead of touching shared local databases. Frontend tests should avoid network calls and should mock API boundaries where needed.
+
+## Extension Points
+
+Future plugins can add additional database backends, frontend styling systems, background workers, email integrations, and deployment targets by registering templates through the generator manifest.

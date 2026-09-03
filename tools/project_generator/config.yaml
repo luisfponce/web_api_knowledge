@@ -1,0 +1,32 @@
+project:
+  name: Task Board Starter
+  description: Team task tracking API and web app
+  destination: /tmp/kilo/task-board-starter
+  init_git: true
+  agents_md: true
+
+stack:
+  backend: fastapi
+  frontend: react-vite
+  database: postgresql
+
+backend_options:
+  auth: true
+  orm: true
+  pydantic_settings: true
+  alembic: true
+  pytest: true
+  ruff: false
+  mypy: false
+
+frontend_options:
+  typescript: true
+  api_client: fetch
+  vitest: true
+  testing_library: false
+
+infra:
+  docker: true
+  redis: true
+  caddy: true
+  github_actions: true

@@ -1,0 +1,100 @@
+# Fully populated Project Generator configuration template.
+# Copy this file, update the values, then run:
+# python -m tools.project_generator --config path/to/config.yaml --yes
+
+project:
+  # Required human-readable project name.
+  name: Acme Task Board
+
+  # Optional. If omitted, derived from project.name as kebab-case.
+  slug: acme-task-board
+
+  # Optional. If omitted, derived from slug as a Python identifier.
+  package_name: acme_task_board
+
+  # Optional. Used in generated README, backend metadata, and frontend copy.
+  description: Team task tracking API and web app
+
+  # Optional. If omitted, defaults to a directory named after the slug in the current working directory.
+  # The destination must be absent or empty when generation runs.
+  destination: /tmp/kilo/acme-task-board
+
+  # Supported value: monorepo. Polyrepo is reserved for a future version.
+  structure: monorepo
+
+  # Initialize a Git repository after generation and sanity checks if Git is available.
+  init_git: true
+
+  # Generate AGENTS.md with architecture and workflow instructions for coding agents.
+  agents_md: true
+
+stack:
+  # Supported values: fastapi, none.
+  backend: fastapi
+
+  # Supported values: react-vite, none.
+  frontend: react-vite
+
+  # Supported values: postgresql, mariadb, sqlite, none.
+  # Databases require a backend in this version.
+  database: postgresql
+
+backend_options:
+  # Generate SQLAlchemy models, repositories, schemas, and CRUD routes when a database is selected.
+  orm: true
+
+  # Recommended for PostgreSQL and MariaDB. For SQLite-only prototypes, this can be false.
+  alembic: true
+
+  # Use Pydantic Settings as the single settings boundary.
+  pydantic_settings: true
+
+  # Generate JWT/OAuth2 auth scaffold. Requires a SQL database.
+  auth: true
+
+  # Reserved extension point for future generated WebSocket routes.
+  websockets: false
+
+  # Reserved extension point for future background-task examples.
+  background_tasks: false
+
+  # Generate Ruff configuration and lint commands.
+  ruff: true
+
+  # Generate Mypy configuration and CI step.
+  mypy: false
+
+  # Generate backend pytest fixtures and tests.
+  pytest: true
+
+frontend_options:
+  # TypeScript is the implemented frontend mode.
+  typescript: true
+
+  # Generate React Router setup.
+  react_router: true
+
+  # Supported value: fetch. Axios is reserved for a future plugin.
+  api_client: fetch
+
+  # Reserved extension point. Current templates use plain CSS.
+  tailwind: false
+
+  # Generate Vitest config usage and sample tests.
+  vitest: true
+
+  # Reserved extension point for future DOM/component testing templates.
+  testing_library: false
+
+infra:
+  # Generate Dockerfiles and Docker Compose overlays.
+  docker: true
+
+  # Include Redis service and environment placeholders.
+  redis: true
+
+  # Generate Caddy production overlay and Caddyfile.example. Requires docker: true.
+  caddy: true
+
+  # Generate CI workflow matching selected backend/frontend jobs.
+  github_actions: true

@@ -1,0 +1,24 @@
+{% if config.infra.caddy %}
+services:
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+{% if config.has_frontend %}
+      - frontend
+{% else %}
+      - backend
+{% endif %}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+{% else %}
+services: {}
+{% endif %}

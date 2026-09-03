@@ -1,0 +1,21 @@
+services:
+{% if config.has_backend %}
+  backend:
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+{% endif %}
+{% if config.has_frontend %}
+  frontend:
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+{% endif %}
+{% if config.has_persistent_database %}
+  {{ config.db_service_name }}:
+    ports:
+      - "${DB_PORT:-{% if config.database.value == "postgresql" %}5432{% else %}3306{% endif %}:{% if config.database.value == "postgresql" %}5432{% else %}3306{% endif %}"
+{% endif %}
+{% if config.infra.redis %}
+  redis:
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+{% endif %}

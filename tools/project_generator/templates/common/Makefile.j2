@@ -1,0 +1,57 @@
+.PHONY: help lint test build up down migrate
+
+help:
+	@printf '%s\n' 'Available targets: lint test{% if config.has_frontend %} build{% endif %}{% if config.infra.docker %} up down{% endif %}{% if config.backend_options.alembic %} migrate{% endif %}'
+
+lint:
+{% if config.has_backend and config.backend_options.ruff %}
+	cd backend && ruff check app tests
+{% endif %}
+{% if config.has_backend and config.backend_options.mypy %}
+	cd backend && mypy app
+{% endif %}
+{% if config.has_frontend %}
+	cd frontend && npm run lint
+{% endif %}
+{% if not config.has_backend and not config.has_frontend %}
+	@printf '%s\n' 'No lint targets generated.'
+{% endif %}
+
+test:
+{% if config.has_backend and config.backend_options.pytest %}
+	cd backend && pytest
+{% endif %}
+{% if config.has_frontend and config.frontend_options.vitest %}
+	cd frontend && npm run test -- --run
+{% endif %}
+{% if (not config.backend_options.pytest) and (not config.frontend_options.vitest) %}
+	@printf '%s\n' 'No test targets generated.'
+{% endif %}
+
+build:
+{% if config.has_frontend %}
+	cd frontend && npm run build
+{% else %}
+	@printf '%s\n' 'No frontend build target generated.'
+{% endif %}
+
+up:
+{% if config.infra.docker %}
+	docker compose -f docker-compose.yml -f docker-compose.local.yml --env-file .env up --build
+{% else %}
+	@printf '%s\n' 'Docker was not selected.'
+{% endif %}
+
+down:
+{% if config.infra.docker %}
+	docker compose -f docker-compose.yml -f docker-compose.local.yml down
+{% else %}
+	@printf '%s\n' 'Docker was not selected.'
+{% endif %}
+
+migrate:
+{% if config.backend_options.alembic %}
+	cd backend && alembic upgrade head
+{% else %}
+	@printf '%s\n' 'Alembic was not selected.'
+{% endif %}
