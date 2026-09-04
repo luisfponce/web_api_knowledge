@@ -1,8 +1,13 @@
 # WebAPI Backend
 
+**Live Demo Link:** https://iprompt.duckdns.org/
+
 ## Overview
 
-The backend is a FastAPI app with users, auth, prompts, SQLModel persistence, MariaDB support, and a SQLite fallback. The ASGI app object is `myapp` in [`main.py`](main.py), and API routes are mounted under `/api/v1`.
+The backend is a FastAP.I app aimed to help people build a personal library for the AI prompts they trust.
+Keep what worked : Turn one-off AI wins into reusable prompts you can return to instead of rebuilding from memory.
+Trust your best versions : Rate prompts by usefulness so the strongest versions rise above the experiments.
+Find prompts faster : Organize by model and category so writing, planning, research, and coding prompts stay easy to scan.
 
 ## Requirements
 
