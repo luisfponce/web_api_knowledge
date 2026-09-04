@@ -5,9 +5,10 @@
 ## Overview
 
 The backend is a FastAP.I app aimed to help people build a personal library for the AI prompts they trust.
-Keep what worked : Turn one-off AI wins into reusable prompts you can return to instead of rebuilding from memory.
-Trust your best versions : Rate prompts by usefulness so the strongest versions rise above the experiments.
-Find prompts faster : Organize by model and category so writing, planning, research, and coding prompts stay easy to scan.
+
+* Keep what worked : Turn one-off AI wins into reusable prompts you can return to instead of rebuilding from memory.
+* Trust your best versions : Rate prompts by usefulness so the strongest versions rise above the experiments.
+* Find prompts faster : Organize by model and category so writing, planning, research, and coding prompts stay easy to scan.
 
 ## Requirements
 
